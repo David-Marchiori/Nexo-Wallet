@@ -105,7 +105,7 @@ const iconPaths: Record<IconName, React.ReactNode> = {
   ),
 }
 
-function Icon({ name, size = 20 }: { name: IconName size?: number }) {
+function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return (
     <svg
       width={size}

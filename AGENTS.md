@@ -1,13 +1,15 @@
-# figma-make-app
+# Nexo
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+Personal finance dashboard. React + Vite + Tailwind CSS project, originally exported from Figma Make and now run locally (the Figma Make plugins were removed).
 
 ## Development Server
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+Uses **npm** (Node 24). No server is started automatically.
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+- `npm install` - Install dependencies
+- `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload
+- `npm run typecheck` - Run `tsc --noEmit`
+- `npm run build` - Type-check, then build to `dist/`
 
 ## Project Structure
 
@@ -18,8 +20,7 @@ This is the canonical project structure. Start with task-relevant files below. O
 - `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
 - `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
 - `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+- `vite.config.ts` - Vite configuration with React and Tailwind CSS v4 plus the `@` alias for `src`
 
 ## Dependencies
 
