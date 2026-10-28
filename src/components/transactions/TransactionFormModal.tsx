@@ -1,8 +1,8 @@
-import { useId, type FormEvent } from "react"
+import { useId, useState, type FormEvent } from "react"
 import { Button } from "@/components/ui/Button"
 import { FormField, FormRow } from "@/components/ui/FormField"
 import { Modal } from "@/components/ui/Modal"
-import { categories } from "@/data/categories"
+import { categoriesFor } from "@/data/categories"
 import { toISODate } from "@/lib/date"
 import type { Category, NewTransaction, TransactionType } from "@/types/transaction"
 import styles from "./TransactionFormModal.module.css"
@@ -14,14 +14,23 @@ type TransactionFormModalProps = {
 
 export function TransactionFormModal({ onClose, onSubmit }: TransactionFormModalProps) {
   const id = useId()
+  const [type, setType] = useState<TransactionType>("expense")
+  const [category, setCategory] = useState<Category>(categoriesFor("expense")[0])
+  const availableCategories = categoriesFor(type)
+
+  function handleTypeChange(nextType: TransactionType) {
+    setType(nextType)
+    const nextCategories = categoriesFor(nextType)
+    if (!nextCategories.includes(category)) setCategory(nextCategories[0])
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     onSubmit({
       title: String(form.get("title")),
-      category: form.get("category") as Category,
-      type: form.get("type") as TransactionType,
+      category,
+      type,
       amount: Number(form.get("amount")),
       date: String(form.get("date")),
     })
@@ -35,7 +44,12 @@ export function TransactionFormModal({ onClose, onSubmit }: TransactionFormModal
         </FormField>
         <FormRow>
           <FormField label="Tipo" htmlFor={`${id}-type`}>
-            <select id={`${id}-type`} name="type" defaultValue="expense">
+            <select
+              id={`${id}-type`}
+              name="type"
+              value={type}
+              onChange={(event) => handleTypeChange(event.target.value as TransactionType)}
+            >
               <option value="expense">Despesa</option>
               <option value="income">Receita</option>
             </select>
@@ -54,9 +68,14 @@ export function TransactionFormModal({ onClose, onSubmit }: TransactionFormModal
         </FormRow>
         <FormRow>
           <FormField label="Categoria" htmlFor={`${id}-category`}>
-            <select id={`${id}-category`} name="category">
-              {categories.map((category) => (
-                <option key={category}>{category}</option>
+            <select
+              id={`${id}-category`}
+              name="category"
+              value={category}
+              onChange={(event) => setCategory(event.target.value as Category)}
+            >
+              {availableCategories.map((option) => (
+                <option key={option}>{option}</option>
               ))}
             </select>
           </FormField>

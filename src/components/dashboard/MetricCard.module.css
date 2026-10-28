@@ -50,12 +50,19 @@
 }
 
 .copy small b {
-  color: var(--green);
   margin-right: 3px;
+}
+
+.copy small b.positive {
+  color: var(--green);
 }
 
 .copy small b.negative {
   color: var(--red);
+}
+
+.copy small b.neutral {
+  color: var(--muted);
 }
 
 @media (max-width: 620px) {

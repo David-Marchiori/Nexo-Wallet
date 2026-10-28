@@ -43,9 +43,28 @@
   display: none;
 }
 
+/*
+  Até 1100px a busca não cabe ao lado dos botões. Em vez de sumir, ela desce
+  para uma linha própria, de largura total: `.actions` vira `display: contents`
+  e seus filhos passam a ser itens diretos do `.topbar`.
+*/
 @media (max-width: 1100px) {
+  .topbar {
+    flex-wrap: wrap;
+    column-gap: 10px;
+  }
+
+  .greeting {
+    margin-right: auto;
+  }
+
+  .actions {
+    display: contents;
+  }
+
   .actions .search {
-    display: none;
+    order: 1;
+    width: 100%;
   }
 }
 
@@ -60,17 +79,14 @@
     color: var(--purple);
     background: white;
     flex: 0 0 auto;
-  }
-
-  .greeting {
-    margin-right: auto;
+    /* Completa os 24px de espaço até a saudação (o column-gap aqui é 10px). */
+    margin-right: 14px;
   }
 }
 
 @media (max-width: 620px) {
   .topbar {
     align-items: flex-start;
-    flex-wrap: wrap;
   }
 
   .greeting h1 {
@@ -80,11 +96,6 @@
   .greeting p,
   .actions .notification {
     display: none;
-  }
-
-  .actions {
-    width: 100%;
-    justify-content: flex-end;
   }
 
   .actions .newButton {

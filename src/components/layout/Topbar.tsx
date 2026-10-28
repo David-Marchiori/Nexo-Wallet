@@ -6,6 +6,8 @@ import { SearchInput } from "@/components/ui/SearchInput"
 import styles from "./Topbar.module.css"
 
 type TopbarProps = {
+  /** Data já formatada, ex.: "QUARTA, 28 DE OUTUBRO". */
+  dateLabel: string
   userFirstName: string
   search: string
   onSearchChange: (value: string) => void
@@ -13,7 +15,7 @@ type TopbarProps = {
   onNewTransaction: () => void
 }
 
-export function Topbar({ userFirstName, search, onSearchChange, onOpenMenu, onNewTransaction }: TopbarProps) {
+export function Topbar({ dateLabel, userFirstName, search, onSearchChange, onOpenMenu, onNewTransaction }: TopbarProps) {
   return (
     <header className={styles.topbar}>
       <button type="button" className={styles.menuButton} onClick={onOpenMenu} aria-label="Abrir menu">
@@ -21,7 +23,7 @@ export function Topbar({ userFirstName, search, onSearchChange, onOpenMenu, onNe
       </button>
 
       <div className={styles.greeting}>
-        <Eyebrow>QUARTA, 14 DE MAIO</Eyebrow>
+        <Eyebrow>{dateLabel}</Eyebrow>
         <h1>{`Olá, ${userFirstName}.`}</h1>
         <p>Aqui está o resumo das suas finanças.</p>
       </div>

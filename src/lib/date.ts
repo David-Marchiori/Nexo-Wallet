@@ -14,6 +14,17 @@ export function parseISODate(isoDate: string): Date {
   return new Date(`${isoDate}T12:00:00`)
 }
 
+/** Mês de uma data ISO: `2026-10-28` → `2026-10`. */
+export function monthOf(isoDate: string): string {
+  return isoDate.slice(0, 7)
+}
+
+/** Desloca um mês `AAAA-MM`: `shiftMonth("2026-01", -1)` → `2025-12`. */
+export function shiftMonth(month: string, offset: number): string {
+  const [year, monthNumber] = month.split("-").map(Number)
+  return monthOf(toISODate(new Date(year, monthNumber - 1 + offset, 1)))
+}
+
 export function isISODate(value: unknown): value is string {
   return (
     typeof value === "string" &&

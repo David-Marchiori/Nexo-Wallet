@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from "react"
+import { useEffect, useId, type ReactNode } from "react"
 import { Eyebrow } from "@/components/ui/Eyebrow"
 import { IconButton } from "@/components/ui/IconButton"
 import styles from "./Modal.module.css"
@@ -12,6 +12,14 @@ type ModalProps = {
 
 export function Modal({ eyebrow, title, onClose, children }: ModalProps) {
   const titleId = useId()
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose()
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [onClose])
 
   return (
     <div className={styles.backdrop} role="presentation" onMouseDown={onClose}>

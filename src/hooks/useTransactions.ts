@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { initialTransactions } from "@/data/initialTransactions"
+import { createSampleTransactions, isLegacySample } from "@/data/sampleTransactions"
 import { createId } from "@/lib/id"
 import { loadTransactions, saveTransactions } from "@/lib/storage"
 import type { NewTransaction, Transaction, TransactionTotals } from "@/types/transaction"
 
 export function useTransactions() {
-  const [transactions, setTransactions] = useState<Transaction[]>(
-    () => loadTransactions() ?? initialTransactions,
-  )
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = loadTransactions()
+    return saved && !isLegacySample(saved) ? saved : createSampleTransactions(new Date())
+  })
 
   useEffect(() => {
     saveTransactions(transactions)

@@ -1,4 +1,4 @@
-import type { Category } from "@/types/transaction"
+import type { Category, TransactionType } from "@/types/transaction"
 
 export type CategoryTone = "purple" | "orange" | "blue" | "pink" | "green" | "yellow" | "gray"
 
@@ -13,7 +13,22 @@ export const categoryTone: Record<Category, CategoryTone> = {
   Outros: "gray",
 }
 
+/** Tipo de lançamento em que cada categoria pode ser usada. */
+const categoryType: Record<Category, TransactionType | "both"> = {
+  Renda: "income",
+  Alimentação: "expense",
+  Moradia: "expense",
+  Assinaturas: "expense",
+  Transporte: "expense",
+  Lazer: "expense",
+  Outros: "both",
+}
+
 export const categories = Object.keys(categoryTone) as Category[]
+
+export function categoriesFor(type: TransactionType): Category[] {
+  return categories.filter((category) => categoryType[category] === type || categoryType[category] === "both")
+}
 
 export function isCategory(value: unknown): value is Category {
   return categories.includes(value as Category)

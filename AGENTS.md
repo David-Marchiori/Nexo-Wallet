@@ -22,8 +22,8 @@ Uses **npm** (Node 24). No server is started automatically.
 - `src/components/dashboard/` - `BalanceCard`, `MetricCard`, `CashflowChart`, `ExpensesByCategory`
 - `src/components/transactions/` - `TransactionList`, `TransactionRow`, `FilterTabs`, `TransactionFormModal`
 - `src/hooks/useTransactions.ts` - Transactions state, persistence, totals, add/update/remove
-- `src/lib/` - Pure helpers: `storage` (localStorage with validation), `date`, `format`, `id`, `cx`
-- `src/data/` - Static data: categories, sample transactions, current user
+- `src/lib/` - Pure helpers: `analytics` (monthly totals, cash flow, expense shares, savings goal), `storage` (localStorage with validation), `date`, `format`, `id`, `cx`
+- `src/data/` - Static data: categories (color tone and which transaction type each one allows), sample transactions generated relative to today, current user and monthly savings goal
 - `src/types/` - Shared TypeScript types
 - `src/styles/reset.css` - Base reset (copy of Tailwind v4 Preflight) inside `@layer base`
 - `src/index.css` - Fonts, reset import, color tokens on `:root`, `body` defaults
@@ -31,7 +31,9 @@ Uses **npm** (Node 24). No server is started automatically.
 ## Conventions
 
 - Import across folders with the `@/` alias (`@/components/ui/Button`).
-- Components receive data through props; formatting lives in `src/lib/format.ts`.
+- Components receive data through props; formatting lives in `src/lib/format.ts`, calculations in `src/lib/analytics.ts`.
+- Months are `AAAA-MM` strings and dates are `AAAA-MM-DD` strings, always in local time (`toISODate`, `monthOf`, `shiftMonth`). Never use `toISOString()` for dates.
+- Dashboard cards: income and expenses are for the current month; balance is cumulative across all transactions.
 - Icon-only buttons use `IconButton`, which requires a `label` (becomes `aria-label`).
 - Render text that mixes a variable with literal characters as one template string (`` {`${value}%`} ``). Separate React text nodes lose kerning and render a few pixels differently.
 
@@ -47,4 +49,4 @@ The reset lives in `@layer base`, so any unlayered rule in `index.css` or a modu
 
 ## Testing
 
-Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears localStorage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed. `src/App.test.tsx` covers the main user flows.
+Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears localStorage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed. `src/App.test.tsx` covers the main user flows with a fixed transaction set and a fixed date (`vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime`), so only `Date` is faked and user-event keeps working.

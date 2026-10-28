@@ -11,6 +11,7 @@ export type IconName =
   | "arrowUp"
   | "arrowDown"
   | "eye"
+  | "eyeOff"
   | "more"
   | "search"
   | "bell"
@@ -79,6 +80,14 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
       <circle cx="12" cy="12" r="2.5" />
+    </>
+  ),
+  eyeOff: (
+    <>
+      <path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c6 0 9.5 6 9.5 6a16.6 16.6 0 0 1-2.3 3.1" />
+      <path d="M6.6 6.6C3.9 8.3 2.5 12 2.5 12s3.5 6 9.5 6a9.3 9.3 0 0 0 4.7-1.3" />
+      <path d="M10.2 10.2a2.5 2.5 0 0 0 3.6 3.6" />
+      <path d="m3 3 18 18" />
     </>
   ),
   more: (

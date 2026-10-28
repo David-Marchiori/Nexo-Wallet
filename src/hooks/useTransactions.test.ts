@@ -1,44 +1,87 @@
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
-import { initialTransactions } from "@/data/initialTransactions"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { createSampleTransactions } from "@/data/sampleTransactions"
 import { useTransactions } from "@/hooks/useTransactions"
 import { loadTransactions } from "@/lib/storage"
+import type { Transaction } from "@/types/transaction"
+
+const TODAY = new Date(2026, 9, 28, 10, 0)
+
+const fixture: Transaction[] = [
+  { id: "1", title: "Salário", category: "Renda", type: "income", amount: 6500, date: "2026-10-05" },
+  { id: "2", title: "Aluguel", category: "Moradia", type: "expense", amount: 2100, date: "2026-10-10" },
+]
 
 describe("useTransactions", () => {
-  it("começa com as transações de exemplo quando não há nada salvo", () => {
-    const { result } = renderHook(() => useTransactions())
-
-    expect(result.current.transactions).toEqual(initialTransactions)
-    expect(result.current.totals).toEqual({ income: 8350, expense: 2608.8, balance: 5741.2 })
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(TODAY)
   })
 
-  it("carrega o que estava salvo", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("começa com exemplos relativos a hoje quando não há nada salvo", () => {
+    const { result } = renderHook(() => useTransactions())
+
+    expect(result.current.transactions).toEqual(createSampleTransactions(TODAY))
+    expect(loadTransactions()).toEqual(result.current.transactions)
+  })
+
+  it("troca os exemplos antigos de maio/2025 pelos novos", () => {
     localStorage.setItem(
       "nexo-transactions",
-      JSON.stringify([{ id: "x", title: "Salvo", category: "Lazer", type: "expense", amount: 30, date: "2025-05-01" }]),
+      JSON.stringify(
+        [1, 2, 3, 4, 5].map((n) => ({
+          id: n,
+          title: `Exemplo ${n}`,
+          category: "Outros",
+          type: "expense",
+          amount: 10,
+          date: `2025-05-0${n}`,
+        })),
+      ),
     )
     const { result } = renderHook(() => useTransactions())
 
-    expect(result.current.transactions.map((t) => t.title)).toEqual(["Salvo"])
-    expect(result.current.totals).toEqual({ income: 0, expense: 30, balance: -30 })
+    expect(result.current.transactions).toEqual(createSampleTransactions(TODAY))
+  })
+
+  it("respeita uma lista vazia salva (não recria exemplos)", () => {
+    localStorage.setItem("nexo-transactions", "[]")
+    const { result } = renderHook(() => useTransactions())
+
+    expect(result.current.transactions).toEqual([])
+    expect(result.current.totals).toEqual({ income: 0, expense: 0, balance: 0 })
+  })
+
+  it("carrega o que estava salvo e calcula os totais", () => {
+    localStorage.setItem("nexo-transactions", JSON.stringify(fixture))
+    const { result } = renderHook(() => useTransactions())
+
+    expect(result.current.transactions).toEqual(fixture)
+    expect(result.current.totals).toEqual({ income: 6500, expense: 2100, balance: 4400 })
   })
 
   it("adiciona no topo com id novo, recalcula totais e salva", () => {
+    localStorage.setItem("nexo-transactions", JSON.stringify(fixture))
     const { result } = renderHook(() => useTransactions())
 
     act(() => {
-      result.current.addTransaction({ title: "Cinema", category: "Lazer", type: "expense", amount: 40, date: "2025-05-20" })
+      result.current.addTransaction({ title: "Cinema", category: "Lazer", type: "expense", amount: 40, date: "2026-10-20" })
     })
 
     const [added] = result.current.transactions
     expect(added.title).toBe("Cinema")
     expect(typeof added.id).toBe("string")
     expect(result.current.transactions.filter((t) => t.id === added.id)).toHaveLength(1)
-    expect(result.current.totals.expense).toBeCloseTo(2648.8)
+    expect(result.current.totals.expense).toBe(2140)
     expect(loadTransactions()?.[0]).toEqual(added)
   })
 
   it("edita uma transação", () => {
+    localStorage.setItem("nexo-transactions", JSON.stringify(fixture))
     const { result } = renderHook(() => useTransactions())
 
     act(() => {
@@ -46,18 +89,19 @@ describe("useTransactions", () => {
     })
 
     expect(result.current.transactions.find((t) => t.id === "1")?.amount).toBe(7000)
-    expect(result.current.totals.income).toBe(8850)
+    expect(result.current.totals.income).toBe(7000)
   })
 
   it("exclui uma transação", () => {
+    localStorage.setItem("nexo-transactions", JSON.stringify(fixture))
     const { result } = renderHook(() => useTransactions())
 
     act(() => {
-      result.current.removeTransaction("4")
+      result.current.removeTransaction("2")
     })
 
-    expect(result.current.transactions.some((t) => t.id === "4")).toBe(false)
-    expect(result.current.totals.expense).toBeCloseTo(508.8)
-    expect(loadTransactions()).toHaveLength(4)
+    expect(result.current.transactions.map((t) => t.id)).toEqual(["1"])
+    expect(result.current.totals.expense).toBe(0)
+    expect(loadTransactions()).toHaveLength(1)
   })
 })

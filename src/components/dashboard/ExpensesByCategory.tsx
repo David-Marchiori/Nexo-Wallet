@@ -1,32 +1,35 @@
 import { IconButton } from "@/components/ui/IconButton"
 import { Panel, PanelHeading } from "@/components/ui/Panel"
-import { formatCurrency } from "@/lib/format"
+import type { ExpenseShare } from "@/lib/analytics"
 import styles from "./ExpensesByCategory.module.css"
 
-export type CategoryShare = {
-  name: string
-  /** Participação no total, de 0 a 100. */
-  percent: number
-  color: string
-}
+const sliceColors = ["#6944dc", "#a791ee", "#d5caf8"]
+const othersColor = "#ebe7f1"
+const emptyColor = "#f1eef4"
 
 type ExpensesByCategoryProps = {
-  total: number
-  categories: CategoryShare[]
+  /** Total já formatado (ou mascarado). */
+  total: string
+  shares: ExpenseShare[]
+}
+
+function colorOf(share: ExpenseShare, index: number) {
+  return share.name === "Outros" ? othersColor : sliceColors[index % sliceColors.length]
 }
 
 /** Monta o `conic-gradient` da rosca, uma fatia por categoria. */
-function donutGradient(categories: CategoryShare[]): string {
+function donutGradient(shares: ExpenseShare[]): string {
+  if (shares.length === 0) return emptyColor
   let start = 0
-  const slices = categories.map(({ percent, color }) => {
-    const slice = `${color} ${start}% ${start + percent}%`
-    start += percent
+  const slices = shares.map((share, index) => {
+    const slice = `${colorOf(share, index)} ${start}% ${start + share.percent}%`
+    start += share.percent
     return slice
   })
   return `conic-gradient(${slices.join(", ")})`
 }
 
-export function ExpensesByCategory({ total, categories }: ExpensesByCategoryProps) {
+export function ExpensesByCategory({ total, shares }: ExpensesByCategoryProps) {
   return (
     <Panel className={styles.panel}>
       <PanelHeading
@@ -35,24 +38,28 @@ export function ExpensesByCategory({ total, categories }: ExpensesByCategoryProp
         action={<IconButton icon="more" label="Mais opções" />}
       />
       <div className={styles.donutWrap}>
-        <div className={styles.donut} style={{ background: donutGradient(categories) }}>
+        <div className={styles.donut} style={{ background: donutGradient(shares) }}>
           <div>
-            <strong>{formatCurrency(total)}</strong>
+            <strong>{total}</strong>
             <span>Total gasto</span>
           </div>
         </div>
       </div>
-      <div className={styles.legend}>
-        {categories.map((category) => (
-          <div key={category.name}>
-            <span>
-              <i style={{ background: category.color }} />
-              {category.name}
-            </span>
-            <strong>{`${category.percent}%`}</strong>
-          </div>
-        ))}
-      </div>
+      {shares.length ? (
+        <div className={styles.legend}>
+          {shares.map((share, index) => (
+            <div key={share.name}>
+              <span>
+                <i style={{ background: colorOf(share, index) }} />
+                {share.name}
+              </span>
+              <strong>{`${share.percent}%`}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className={styles.empty}>Nenhuma despesa neste mês.</p>
+      )}
     </Panel>
   )
 }

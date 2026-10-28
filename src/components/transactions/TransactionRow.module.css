@@ -68,10 +68,6 @@
   font-size: 9px;
 }
 
-.date {
-  text-transform: capitalize;
-}
-
 .income,
 .expense {
   text-align: right;

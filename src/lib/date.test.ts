@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isISODate, parseISODate, toISODate } from "@/lib/date"
+import { isISODate, monthOf, parseISODate, shiftMonth, toISODate } from "@/lib/date"
 
 describe("toISODate", () => {
   it("usa o dia local, mesmo tarde da noite", () => {
@@ -16,6 +16,18 @@ describe("parseISODate", () => {
   it("lê a data como meio-dia local", () => {
     const date = parseISODate("2025-05-08")
     expect([date.getFullYear(), date.getMonth(), date.getDate(), date.getHours()]).toEqual([2025, 4, 8, 12])
+  })
+})
+
+describe("monthOf / shiftMonth", () => {
+  it("extrai o mês de uma data", () => {
+    expect(monthOf("2026-10-28")).toBe("2026-10")
+  })
+
+  it("desloca meses atravessando o ano", () => {
+    expect(shiftMonth("2026-01", -1)).toBe("2025-12")
+    expect(shiftMonth("2026-10", 3)).toBe("2027-01")
+    expect(shiftMonth("2026-10", -12)).toBe("2025-10")
   })
 })
 

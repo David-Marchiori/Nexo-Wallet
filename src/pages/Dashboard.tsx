@@ -1,39 +1,68 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { BalanceCard } from "@/components/dashboard/BalanceCard"
-import { CashflowChart, type CashflowPoint } from "@/components/dashboard/CashflowChart"
-import { ExpensesByCategory, type CategoryShare } from "@/components/dashboard/ExpensesByCategory"
-import { MetricCard } from "@/components/dashboard/MetricCard"
+import { CashflowChart, type CashflowPeriod } from "@/components/dashboard/CashflowChart"
+import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory"
+import { MetricCard, type ChangeTone } from "@/components/dashboard/MetricCard"
 import { TransactionList } from "@/components/transactions/TransactionList"
-import { formatCurrency } from "@/lib/format"
+import {
+  balanceBefore,
+  expenseShares,
+  monthlyCashflow,
+  percentChange,
+  summarizeMonth,
+} from "@/lib/analytics"
+import { shiftMonth } from "@/lib/date"
+import { formatCurrency, formatPercentChange } from "@/lib/format"
 import type { Transaction, TransactionTotals } from "@/types/transaction"
 import styles from "./Dashboard.module.css"
 
-// Valores fixos vindos do design. Passam a ser calculados a partir das transações na fase 4.
-const cashflowPlaceholder: CashflowPoint[] = [
-  { month: "Dez", income: 42, expense: 35 },
-  { month: "Jan", income: 58, expense: 44 },
-  { month: "Fev", income: 48, expense: 62 },
-  { month: "Mar", income: 67, expense: 45 },
-  { month: "Abr", income: 76, expense: 57 },
-  { month: "Mai", income: 88, expense: 49 },
-]
+const HIDDEN_VALUE = "R$ ••••••"
 
-const expenseSharesPlaceholder: CategoryShare[] = [
-  { name: "Moradia", percent: 48, color: "#6944dc" },
-  { name: "Alimentação", percent: 26, color: "#a791ee" },
-  { name: "Assinaturas", percent: 14, color: "#d5caf8" },
-  { name: "Outros", percent: 12, color: "#ebe7f1" },
-]
+/** Texto e cor da variação; `higherIsBetter` diz se subir é bom (receitas) ou ruim (despesas). */
+function describeChange(ratio: number | null, higherIsBetter: boolean): { change: string | null; tone: ChangeTone } {
+  if (ratio === null) return { change: null, tone: "neutral" }
+  if (ratio === 0) return { change: formatPercentChange(0), tone: "neutral" }
+  return { change: formatPercentChange(ratio), tone: ratio > 0 === higherIsBetter ? "positive" : "negative" }
+}
 
 type DashboardProps = {
   transactions: Transaction[]
   totals: TransactionTotals
   search: string
+  /** Mês atual, `AAAA-MM`. */
+  currentMonth: string
 }
 
-export function Dashboard({ transactions, totals, search }: DashboardProps) {
-  const [balanceVisible, setBalanceVisible] = useState(true)
-  const money = (value: number) => (balanceVisible ? formatCurrency(value) : "R$ ••••••")
+export function Dashboard({ transactions, totals, search, currentMonth }: DashboardProps) {
+  const [valuesHidden, setValuesHidden] = useState(false)
+  const [period, setPeriod] = useState<CashflowPeriod>(6)
+  const money = (value: number) => (valuesHidden ? HIDDEN_VALUE : formatCurrency(value))
+
+  const month = useMemo(() => {
+    const current = summarizeMonth(transactions, currentMonth)
+    const previous = summarizeMonth(transactions, shiftMonth(currentMonth, -1))
+    return {
+      income: current.income,
+      expense: current.expense,
+      incomeChange: describeChange(percentChange(current.income, previous.income), true),
+      expenseChange: describeChange(percentChange(current.expense, previous.expense), false),
+      startBalance: balanceBefore(transactions, currentMonth),
+      shares: expenseShares(transactions, currentMonth),
+    }
+  }, [transactions, currentMonth])
+
+  const cashflow = useMemo(
+    () => monthlyCashflow(transactions, currentMonth, period),
+    [transactions, currentMonth, period],
+  )
+
+  // Variação do saldo no mês; sem saldo anterior não há percentual, então mostra o valor.
+  const balanceRatio = percentChange(totals.balance, month.startBalance)
+  const balanceDelta = totals.balance - month.startBalance
+  const balanceChange =
+    balanceRatio !== null
+      ? `${formatPercentChange(balanceRatio)} este mês`
+      : `${balanceDelta < 0 ? "-" : "+"}${money(Math.abs(balanceDelta))} este mês`
 
   return (
     <>
@@ -42,30 +71,31 @@ export function Dashboard({ transactions, totals, search }: DashboardProps) {
           className={styles.balance}
           value={money(totals.balance)}
           accountName="Conta principal"
-          change="+12,5% este mês"
-          onToggleVisibility={() => setBalanceVisible((visible) => !visible)}
+          change={balanceChange}
+          valuesHidden={valuesHidden}
+          onToggleVisibility={() => setValuesHidden((hidden) => !hidden)}
         />
         <MetricCard
           variant="income"
-          label="Receitas"
-          value={money(totals.income)}
-          change="+8,2%"
-          changeTone="positive"
+          label="Receitas do mês"
+          value={money(month.income)}
+          change={month.incomeChange.change}
+          changeTone={month.incomeChange.tone}
           actionLabel="Ver receitas"
         />
         <MetricCard
           variant="expense"
-          label="Despesas"
-          value={money(totals.expense)}
-          change="-3,4%"
-          changeTone="negative"
+          label="Despesas do mês"
+          value={money(month.expense)}
+          change={month.expenseChange.change}
+          changeTone={month.expenseChange.tone}
           actionLabel="Ver despesas"
         />
       </section>
 
       <section className={styles.chartsGrid}>
-        <CashflowChart data={cashflowPlaceholder} />
-        <ExpensesByCategory total={totals.expense} categories={expenseSharesPlaceholder} />
+        <CashflowChart data={cashflow} period={period} onPeriodChange={setPeriod} />
+        <ExpensesByCategory total={money(month.expense)} shares={month.shares} />
       </section>
 
       <TransactionList transactions={transactions} search={search} />

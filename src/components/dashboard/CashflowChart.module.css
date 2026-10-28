@@ -14,6 +14,22 @@
   color: #77717e;
   background: #fff;
   font-size: 9px;
+  position: relative;
+  cursor: pointer;
+}
+
+/* O <select> nativo fica invisível por cima do botão: o visual é o do design e a lista é a do sistema. */
+.periodButton select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.periodButton:focus-within {
+  border-color: #8c70e9;
+  box-shadow: 0 0 0 3px #eee9ff;
 }
 
 .legend {
@@ -112,6 +128,17 @@
 
 .lineThree {
   top: 71%;
+}
+
+.empty {
+  position: absolute;
+  inset: 0 0 auto;
+  top: 40%;
+  z-index: 3;
+  margin: 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 @media (max-width: 620px) {

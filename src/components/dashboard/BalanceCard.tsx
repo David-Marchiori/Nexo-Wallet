@@ -7,19 +7,22 @@ type BalanceCardProps = {
   value: string
   accountName: string
   change: string
+  /** Se os valores do dashboard estão ocultos. */
+  valuesHidden: boolean
   onToggleVisibility: () => void
   className?: string
 }
 
-export function BalanceCard({ value, accountName, change, onToggleVisibility, className }: BalanceCardProps) {
+export function BalanceCard({ value, accountName, change, valuesHidden, onToggleVisibility, className }: BalanceCardProps) {
   return (
     <article className={cx(styles.card, className)}>
       <div className={styles.top}>
         <span>Saldo disponível</span>
         <IconButton
-          icon="eye"
+          icon={valuesHidden ? "eyeOff" : "eye"}
           iconSize={18}
-          label="Mostrar ou ocultar saldo"
+          label={valuesHidden ? "Mostrar valores" : "Ocultar valores"}
+          aria-pressed={valuesHidden}
           className={styles.toggle}
           onClick={onToggleVisibility}
         />

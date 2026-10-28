@@ -5,6 +5,7 @@ import { ProfileCard } from "@/components/layout/ProfileCard"
 import { Icon, type IconName } from "@/components/ui/Icon"
 import { IconButton } from "@/components/ui/IconButton"
 import { currentUser } from "@/data/user"
+import type { GoalStatus } from "@/lib/analytics"
 import { cx } from "@/lib/cx"
 import styles from "./Sidebar.module.css"
 
@@ -33,9 +34,10 @@ type SidebarProps = {
   /** Aberto como gaveta no celular. */
   open: boolean
   onClose: () => void
+  goal: GoalStatus
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose, goal }: SidebarProps) {
   return (
     <>
       <aside className={cx(styles.sidebar, open && styles.open)}>
@@ -58,7 +60,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <GoalCard className={styles.goal} title="Meta do mês" description="Você está no caminho certo." progress={68} />
+        <GoalCard className={styles.goal} title="Meta do mês" description={goal.description} progress={goal.progress} />
 
         <ProfileCard name={currentUser.name} initials={currentUser.initials} subtitle={currentUser.accountLabel} />
       </aside>

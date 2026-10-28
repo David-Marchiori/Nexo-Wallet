@@ -34,6 +34,12 @@
   color: white !important;
 }
 
+/* No fundo escuro do menu: antes era um quadrado branco com o X branco, invisível. */
+.brand .closeButton {
+  border-color: #302c36;
+  background: #242129;
+}
+
 .nav {
   display: flex;
   flex-direction: column;
