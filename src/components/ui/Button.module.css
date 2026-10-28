@@ -1,0 +1,28 @@
+.button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.primary {
+  color: #fff;
+  background: linear-gradient(120deg, #7652e7, #6139d6);
+  box-shadow: 0 9px 22px rgba(101, 61, 216, 0.2);
+}
+
+.primary:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+
+.secondary {
+  color: var(--ink);
+  background: #f1eff4;
+}

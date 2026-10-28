@@ -1,0 +1,26 @@
+.root {
+  padding: 22px 23px 8px;
+}
+
+.root .heading {
+  align-items: center;
+  margin-bottom: 11px;
+}
+
+.empty {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  .root {
+    padding: 18px 15px 12px;
+  }
+
+  .root .heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

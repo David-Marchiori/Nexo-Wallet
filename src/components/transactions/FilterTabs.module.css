@@ -1,0 +1,33 @@
+.tabs {
+  padding: 3px;
+  border-radius: 8px;
+  display: flex;
+  background: #f5f3f7;
+}
+
+.tabs button {
+  height: 27px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 6px;
+  color: #96919d;
+  background: transparent;
+  font-size: 9px;
+}
+
+.tabs button.active {
+  color: #5c38ce;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(34, 26, 48, 0.07);
+  font-weight: 600;
+}
+
+@media (max-width: 620px) {
+  .tabs {
+    width: 100%;
+  }
+
+  .tabs button {
+    flex: 1;
+  }
+}

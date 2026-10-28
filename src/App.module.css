@@ -1,0 +1,30 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  width: calc(100% - 246px);
+  margin-left: 246px;
+  padding: 34px 42px 46px;
+  max-width: 1600px;
+}
+
+@media (max-width: 1100px) {
+  .main {
+    padding: 28px;
+  }
+}
+
+@media (max-width: 820px) {
+  .main {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .main {
+    padding: 20px 16px 35px;
+  }
+}

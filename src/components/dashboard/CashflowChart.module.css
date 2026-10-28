@@ -1,0 +1,125 @@
+.panel {
+  min-height: 332px;
+  padding: 22px 23px 17px;
+}
+
+.periodButton {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #77717e;
+  background: #fff;
+  font-size: 9px;
+}
+
+.legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin: 14px 3px 0;
+  color: #88838e;
+  font-size: 9px;
+}
+
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.legendIncome {
+  background: var(--purple);
+}
+
+.legendExpense {
+  background: #d9d4e2;
+}
+
+.chart {
+  height: 214px;
+  padding: 0 8px;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  position: relative;
+}
+
+.group {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 9px;
+  position: relative;
+  z-index: 2;
+}
+
+.bars {
+  height: 172px;
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.bar {
+  width: 9px;
+  min-height: 10px;
+  border-radius: 4px 4px 2px 2px;
+  transition: height 0.4s ease;
+}
+
+.incomeBar {
+  background: linear-gradient(180deg, #8364ea, #6842d6);
+}
+
+.expenseBar {
+  background: #e4e0e9;
+}
+
+.group span {
+  color: #9c97a3;
+  font-size: 9px;
+}
+
+.gridLine {
+  height: 1px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: #f0edf3;
+  z-index: 1;
+}
+
+.lineOne {
+  top: 23%;
+}
+
+.lineTwo {
+  top: 47%;
+}
+
+.lineThree {
+  top: 71%;
+}
+
+@media (max-width: 620px) {
+  .panel {
+    padding: 18px 15px 12px;
+  }
+
+  .periodButton {
+    font-size: 0;
+  }
+}

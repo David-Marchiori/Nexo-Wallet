@@ -1,0 +1,65 @@
+.card {
+  border-radius: 17px;
+  min-height: 154px;
+  padding: 24px 20px;
+  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 43px 1fr auto;
+  align-items: start;
+  gap: 14px;
+  background: var(--surface);
+}
+
+.icon {
+  width: 43px;
+  height: 43px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.income {
+  color: #1e9e7e;
+  background: #e7f6f1;
+}
+
+.expense {
+  color: #d85668;
+  background: #fcecef;
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.copy > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.copy > strong {
+  margin: 7px 0 10px;
+  font: 700 19px 'Manrope', sans-serif;
+  letter-spacing: -0.035em;
+}
+
+.copy small {
+  color: #98939f;
+  font-size: 9px;
+}
+
+.copy small b {
+  color: var(--green);
+  margin-right: 3px;
+}
+
+.copy small b.negative {
+  color: var(--red);
+}
+
+@media (max-width: 620px) {
+  .card {
+    min-height: 130px;
+  }
+}

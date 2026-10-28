@@ -1,0 +1,25 @@
+.box {
+  width: 210px;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #aaa5b1;
+  background: var(--surface);
+}
+
+.box input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+}
+
+.box input::placeholder {
+  color: #aaa5b1;
+}

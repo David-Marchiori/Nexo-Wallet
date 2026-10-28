@@ -1,0 +1,39 @@
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 1100px) {
+  .summaryGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .balance {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 820px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .balance {
+    grid-column: auto;
+  }
+}

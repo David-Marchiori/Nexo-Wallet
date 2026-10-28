@@ -1,0 +1,22 @@
+.base {
+  border: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+}
+
+.outlined {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.circle {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}

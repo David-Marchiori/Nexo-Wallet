@@ -1,0 +1,39 @@
+.profile {
+  padding: 17px 5px 0;
+  border-top: 1px solid #2d2931;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ece7ff;
+  color: #6040cf;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile strong {
+  font-size: 11px;
+}
+
+.profile span {
+  color: #77717e;
+  font-size: 10px;
+}
+
+.profile > svg {
+  color: #6f6976;
+}

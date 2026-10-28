@@ -1,6 +1,6 @@
 # Nexo
 
-Personal finance dashboard. React + Vite + Tailwind CSS project, originally exported from Figma Make and now run locally (the Figma Make plugins were removed).
+Personal finance dashboard. React + Vite + TypeScript with CSS Modules, originally exported from Figma Make and now run locally (the Figma Make plugins and Tailwind were removed).
 
 ## Development Server
 
@@ -9,30 +9,42 @@ Uses **npm** (Node 24). No server is started automatically.
 - `npm install` - Install dependencies
 - `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload
 - `npm run typecheck` - Run `tsc --noEmit`
+- `npm test` - Run the Vitest suite once (`npm run test:watch` to keep it running)
 - `npm run build` - Type-check, then build to `dist/`
 
 ## Project Structure
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx`
+- `src/App.tsx` - App shell: sidebar, topbar, current page and the new-transaction modal; owns `useTransactions`, search and mobile-menu state
+- `src/pages/` - One component per screen (`Dashboard.tsx` for now)
+- `src/components/ui/` - Generic building blocks: `Icon`, `Button`, `IconButton`, `Modal`, `FormField`/`FormRow`, `Panel`/`PanelHeading`, `SearchInput`, `Eyebrow`
+- `src/components/layout/` - `Sidebar` (with `NavItem`, `GoalCard`, `ProfileCard`) and `Topbar`
+- `src/components/dashboard/` - `BalanceCard`, `MetricCard`, `CashflowChart`, `ExpensesByCategory`
+- `src/components/transactions/` - `TransactionList`, `TransactionRow`, `FilterTabs`, `TransactionFormModal`
+- `src/hooks/useTransactions.ts` - Transactions state, persistence, totals, add/update/remove
+- `src/lib/` - Pure helpers: `storage` (localStorage with validation), `date`, `format`, `id`, `cx`
+- `src/data/` - Static data: categories, sample transactions, current user
+- `src/types/` - Shared TypeScript types
+- `src/styles/reset.css` - Base reset (copy of Tailwind v4 Preflight) inside `@layer base`
+- `src/index.css` - Fonts, reset import, color tokens on `:root`, `body` defaults
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React and Tailwind CSS v4 plus the `@` alias for `src`
+## Conventions
 
-## Dependencies
-
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
+- Import across folders with the `@/` alias (`@/components/ui/Button`).
+- Components receive data through props; formatting lives in `src/lib/format.ts`.
+- Icon-only buttons use `IconButton`, which requires a `label` (becomes `aria-label`).
+- Render text that mixes a variable with literal characters as one template string (`` {`${value}%`} ``). Separate React text nodes lose kerning and render a few pixels differently.
 
 ## Styling
 
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
+Each component has a `.module.css` next to it, with camelCase class names (`styles.cardTop`). Combine classes with `cx()` from `src/lib/cx.ts`. Global CSS is limited to `src/index.css`; use the color tokens defined there (`var(--purple)`, `var(--border)`…).
 
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
+Breakpoints: `1100px` (tablet), `820px` (sidebar becomes a drawer), `620px` (phone). Each module keeps its own media queries.
 
-Tailwind emits utility classes in `@layer utilities`, and CSS outside any cascade layer overrides every layer regardless of specificity. Put global element styles, such as resets and defaults for `body`, headings, `button`, or `input`, inside `@layer base { ... }` so utility classes on those elements still apply. Tailwind's Preflight already applies `box-sizing: border-box`, removes default margins, and sets `font: inherit` on form controls, so do not repeat those rules.
+When a parent needs to override a child component's style, pass a `className` and target it with a two-class selector in the parent's module (e.g. `.header .close`). This keeps priority independent of CSS load order.
+
+The reset lives in `@layer base`, so any unlayered rule in `index.css` or a module wins over it.
+
+## Testing
+
+Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears localStorage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed. `src/App.test.tsx` covers the main user flows.
