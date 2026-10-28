@@ -1,15 +1,9 @@
-import { FormEvent, useEffect, useMemo, useState } from "react"
-
-type TransactionType = "income" | "expense"
-
-type Transaction = {
-  id: number
-  title: string
-  category: string
-  type: TransactionType
-  amount: number
-  date: string
-}
+import { FormEvent, useState } from "react"
+import { categories, categoryColorClass } from "@/data/categories"
+import { useTransactions } from "@/hooks/useTransactions"
+import { toISODate } from "@/lib/date"
+import { formatCurrency, formatShortDate } from "@/lib/format"
+import type { Category, TransactionFilter, TransactionType } from "@/types/transaction"
 
 type IconName = "wallet" | "grid" | "swap" | "chart" | "target" | "settings" | "plus" | "arrowUp" | "arrowDown" | "eye" | "more" | "search" | "bell" | "chevron" | "close" | "calendar"
 
@@ -123,117 +117,34 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   )
 }
 
-const initialTransactions: Transaction[] = [
-  {
-    id: 1,
-    title: "Salário",
-    category: "Renda",
-    type: "income",
-    amount: 6500,
-    date: "2025-05-05",
-  },
-  {
-    id: 2,
-    title: "Supermercado",
-    category: "Alimentação",
-    type: "expense",
-    amount: 486.9,
-    date: "2025-05-08",
-  },
-  {
-    id: 3,
-    title: "Projeto freelance",
-    category: "Renda",
-    type: "income",
-    amount: 1850,
-    date: "2025-05-11",
-  },
-  {
-    id: 4,
-    title: "Aluguel",
-    category: "Moradia",
-    type: "expense",
-    amount: 2100,
-    date: "2025-05-12",
-  },
-  {
-    id: 5,
-    title: "Spotify",
-    category: "Assinaturas",
-    type: "expense",
-    amount: 21.9,
-    date: "2025-05-13",
-  },
-]
-
-const categoryColors: Record<string, string> = {
-  Renda: "category-purple",
-  Alimentação: "category-orange",
-  Moradia: "category-blue",
-  Assinaturas: "category-pink",
-  Transporte: "category-green",
-  Lazer: "category-yellow",
-  Outros: "category-gray",
-}
-
-const currency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-})
-const shortDate = new Intl.DateTimeFormat("pt-BR", {
-  day: "2-digit",
-  month: "short",
-})
-
 function App() {
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem("nexo-transactions")
-    return saved ? JSON.parse(saved) : initialTransactions
-  })
+  const { transactions, totals, addTransaction } = useTransactions()
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [activeFilter, setActiveFilter] = useState<"all" | TransactionType>(
-    "all",
-  )
+  const [activeFilter, setActiveFilter] = useState<TransactionFilter>("all")
   const [search, setSearch] = useState("")
   const [balanceVisible, setBalanceVisible] = useState(true)
   const [mobileNav, setMobileNav] = useState(false)
-
-  useEffect(() => {
-    localStorage.setItem("nexo-transactions", JSON.stringify(transactions))
-  }, [transactions])
-
-  const totals = useMemo(() => {
-    const income = transactions
-      .filter((item) => item.type === "income")
-      .reduce((sum, item) => sum + item.amount, 0)
-    const expense = transactions
-      .filter((item) => item.type === "expense")
-      .reduce((sum, item) => sum + item.amount, 0)
-    return { income, expense, balance: income - expense }
-  }, [transactions])
 
   const filteredTransactions = transactions
     .filter((item) => activeFilter === "all" || item.type === activeFilter)
     .filter((item) => item.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => b.date.localeCompare(a.date))
 
-  function addTransaction(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
-    const next: Transaction = {
-      id: Date.now(),
+    addTransaction({
       title: String(form.get("title")),
-      category: String(form.get("category")),
+      category: form.get("category") as Category,
       type: form.get("type") as TransactionType,
       amount: Number(form.get("amount")),
       date: String(form.get("date")),
-    }
-    setTransactions((current) => [next, ...current])
+    })
     setIsModalOpen(false)
   }
 
   const displayMoney = (value: number) =>
-    balanceVisible ? currency.format(value) : "R$ ••••••"
+    balanceVisible ? formatCurrency(value) : "R$ ••••••"
 
   return (
     <div className="app-shell">
@@ -458,7 +369,7 @@ function App() {
             <div className="donut-wrap">
               <div className="donut">
                 <div>
-                  <strong>{currency.format(totals.expense)}</strong>
+                  <strong>{formatCurrency(totals.expense)}</strong>
                   <span>Total gasto</span>
                 </div>
               </div>
@@ -497,9 +408,7 @@ function App() {
                 <button
                   key={value}
                   className={activeFilter === value ? "active" : ""}
-                  onClick={() =>
-                    setActiveFilter(value as "all" | TransactionType)
-                  }
+                  onClick={() => setActiveFilter(value as TransactionFilter)}
                 >
                   {label}
                 </button>
@@ -511,7 +420,7 @@ function App() {
               filteredTransactions.slice(0, 6).map((transaction) => (
                 <div className="transaction-row" key={transaction.id}>
                   <div
-                    className={`transaction-icon ${categoryColors[transaction.category] || "category-gray"}`}
+                    className={`transaction-icon ${categoryColorClass[transaction.category]}`}
                   >
                     <Icon
                       name={
@@ -525,7 +434,7 @@ function App() {
                     <span>{transaction.category}</span>
                   </div>
                   <span className="transaction-date">
-                    {shortDate.format(new Date(`${transaction.date}T12:00:00`))}
+                    {formatShortDate(transaction.date)}
                   </span>
                   <strong
                     className={
@@ -535,7 +444,7 @@ function App() {
                     }
                   >
                     {transaction.type === "income" ? "+" : "-"}{" "}
-                    {currency.format(transaction.amount)}
+                    {formatCurrency(transaction.amount)}
                   </strong>
                   <button className="ghost-button">
                     <Icon name="more" />
@@ -575,7 +484,7 @@ function App() {
                 <Icon name="close" />
               </button>
             </div>
-            <form onSubmit={addTransaction}>
+            <form onSubmit={handleSubmit}>
               <div className="form-field">
                 <label htmlFor="title">Descrição</label>
                 <input
@@ -611,7 +520,7 @@ function App() {
                 <div className="form-field">
                   <label htmlFor="category">Categoria</label>
                   <select id="category" name="category">
-                    {Object.keys(categoryColors).map((category) => (
+                    {categories.map((category) => (
                       <option key={category}>{category}</option>
                     ))}
                   </select>
@@ -622,7 +531,7 @@ function App() {
                     id="date"
                     name="date"
                     type="date"
-                    defaultValue={new Date().toISOString().slice(0, 10)}
+                    defaultValue={toISODate(new Date())}
                     required
                   />
                 </div>
