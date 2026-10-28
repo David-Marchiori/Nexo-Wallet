@@ -5,6 +5,11 @@
   background: #201e24;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: #4a4356;
 }
 
 .icon {

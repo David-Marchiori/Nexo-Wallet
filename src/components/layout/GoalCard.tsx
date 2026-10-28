@@ -1,3 +1,4 @@
+import { Link } from "react-router"
 import { Icon } from "@/components/ui/Icon"
 import { cx } from "@/lib/cx"
 import styles from "./GoalCard.module.css"
@@ -7,12 +8,14 @@ type GoalCardProps = {
   description: string
   /** Progresso de 0 a 100. */
   progress: number
+  to: string
+  onNavigate?: () => void
   className?: string
 }
 
-export function GoalCard({ title, description, progress, className }: GoalCardProps) {
+export function GoalCard({ title, description, progress, to, onNavigate, className }: GoalCardProps) {
   return (
-    <div className={cx(styles.card, className)}>
+    <Link to={to} onClick={onNavigate} className={cx(styles.card, className)}>
       <div className={styles.icon}>
         <Icon name="target" />
       </div>
@@ -22,6 +25,6 @@ export function GoalCard({ title, description, progress, className }: GoalCardPr
         <i style={{ width: `${progress}%` }} />
       </div>
       <small>{`${progress}% concluído`}</small>
-    </div>
+    </Link>
   )
 }

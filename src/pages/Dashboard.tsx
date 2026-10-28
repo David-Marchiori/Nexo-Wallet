@@ -3,7 +3,9 @@ import { BalanceCard } from "@/components/dashboard/BalanceCard"
 import { CashflowChart, type CashflowPeriod } from "@/components/dashboard/CashflowChart"
 import { ExpensesByCategory } from "@/components/dashboard/ExpensesByCategory"
 import { MetricCard, type ChangeTone } from "@/components/dashboard/MetricCard"
+import { useLayoutContext } from "@/components/layout/AppLayout"
 import { TransactionList } from "@/components/transactions/TransactionList"
+import { useTransactionsStore } from "@/context/AppDataContext"
 import {
   balanceBefore,
   expenseShares,
@@ -13,7 +15,7 @@ import {
 } from "@/lib/analytics"
 import { shiftMonth } from "@/lib/date"
 import { formatCurrency, formatPercentChange } from "@/lib/format"
-import type { Transaction, TransactionTotals } from "@/types/transaction"
+import { transactionsPath } from "@/lib/transactionFilters"
 import styles from "./Dashboard.module.css"
 
 const HIDDEN_VALUE = "R$ ••••••"
@@ -25,15 +27,9 @@ function describeChange(ratio: number | null, higherIsBetter: boolean): { change
   return { change: formatPercentChange(ratio), tone: ratio > 0 === higherIsBetter ? "positive" : "negative" }
 }
 
-type DashboardProps = {
-  transactions: Transaction[]
-  totals: TransactionTotals
-  search: string
-  /** Mês atual, `AAAA-MM`. */
-  currentMonth: string
-}
-
-export function Dashboard({ transactions, totals, search, currentMonth }: DashboardProps) {
+export function Dashboard() {
+  const { transactions, totals } = useTransactionsStore()
+  const { search, currentMonth, editTransaction, deleteTransaction } = useLayoutContext()
   const [valuesHidden, setValuesHidden] = useState(false)
   const [period, setPeriod] = useState<CashflowPeriod>(6)
   const money = (value: number) => (valuesHidden ? HIDDEN_VALUE : formatCurrency(value))
@@ -81,7 +77,7 @@ export function Dashboard({ transactions, totals, search, currentMonth }: Dashbo
           value={money(month.income)}
           change={month.incomeChange.change}
           changeTone={month.incomeChange.tone}
-          actionLabel="Ver receitas"
+          action={{ label: "Ver receitas do mês", to: transactionsPath({ type: "income", month: currentMonth }) }}
         />
         <MetricCard
           variant="expense"
@@ -89,16 +85,25 @@ export function Dashboard({ transactions, totals, search, currentMonth }: Dashbo
           value={money(month.expense)}
           change={month.expenseChange.change}
           changeTone={month.expenseChange.tone}
-          actionLabel="Ver despesas"
+          action={{ label: "Ver despesas do mês", to: transactionsPath({ type: "expense", month: currentMonth }) }}
         />
       </section>
 
       <section className={styles.chartsGrid}>
         <CashflowChart data={cashflow} period={period} onPeriodChange={setPeriod} />
-        <ExpensesByCategory total={money(month.expense)} shares={month.shares} />
+        <ExpensesByCategory
+          total={money(month.expense)}
+          shares={month.shares}
+          detailsTo={transactionsPath({ type: "expense", month: currentMonth })}
+        />
       </section>
 
-      <TransactionList transactions={transactions} search={search} />
+      <TransactionList
+        transactions={transactions}
+        search={search}
+        onEdit={editTransaction}
+        onDelete={deleteTransaction}
+      />
     </>
   )
 }

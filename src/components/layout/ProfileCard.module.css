@@ -36,4 +36,9 @@
 
 .profile > svg {
   color: #6f6976;
+  transition: color 0.2s ease;
+}
+
+.profile:hover > svg {
+  color: #fff;
 }

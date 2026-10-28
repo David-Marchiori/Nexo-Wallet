@@ -26,3 +26,24 @@
   color: var(--ink);
   background: #f1eff4;
 }
+
+.secondary:hover {
+  background: #e9e6ee;
+}
+
+.danger {
+  color: #fff;
+  background: var(--red);
+  box-shadow: 0 9px 22px rgba(226, 95, 109, 0.2);
+}
+
+.danger:hover {
+  filter: brightness(1.05);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}

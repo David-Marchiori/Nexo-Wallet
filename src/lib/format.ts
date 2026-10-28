@@ -13,6 +13,7 @@ const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
 const weekdayFormatter = new Intl.DateTimeFormat("pt-BR", { weekday: "long" })
 const dayMonthFormatter = new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" })
 const monthShortFormatter = new Intl.DateTimeFormat("pt-BR", { month: "short" })
+const monthLongFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" })
 
 const percentChangeFormatter = new Intl.NumberFormat("pt-BR", {
   style: "percent",
@@ -40,6 +41,17 @@ export function formatGreetingDate(date: Date): string {
 export function formatMonthShort(month: string): string {
   const label = monthShortFormatter.format(parseISODate(`${month}-01`)).replace(".", "")
   return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+/** Nome do mês com ano: `2026-10` → `Outubro de 2026`. */
+export function formatMonthLong(month: string): string {
+  const label = monthLongFormatter.format(parseISODate(`${month}-01`))
+  return label.charAt(0).toUpperCase() + label.slice(1)
+}
+
+/** `1` → `1 transação`; `3` → `3 transações`. */
+export function formatTransactionCount(count: number): string {
+  return `${count} ${count === 1 ? "transação" : "transações"}`
 }
 
 /** Variação relativa com sinal: `0.082` → `+8,2%`. */

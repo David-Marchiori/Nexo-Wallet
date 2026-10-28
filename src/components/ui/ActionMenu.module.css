@@ -1,0 +1,41 @@
+.root {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  min-width: 140px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.item {
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  font-size: 12px;
+}
+
+.item:hover,
+.item:focus-visible {
+  outline: 0;
+  background: #f5f3f7;
+}
+
+.item.danger {
+  color: var(--red);
+}

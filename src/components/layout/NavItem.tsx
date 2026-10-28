@@ -1,18 +1,26 @@
+import { NavLink } from "react-router"
 import { Icon, type IconName } from "@/components/ui/Icon"
 import { cx } from "@/lib/cx"
 import styles from "./NavItem.module.css"
 
 type NavItemProps = {
+  to: string
   icon: IconName
   label: string
-  active?: boolean
+  onNavigate?: () => void
 }
 
-export function NavItem({ icon, label, active = false }: NavItemProps) {
+/** Link do menu lateral; fica destacado (e com `aria-current="page"`) na página atual. */
+export function NavItem({ to, icon, label, onNavigate }: NavItemProps) {
   return (
-    <button type="button" className={cx(styles.item, active && styles.active)}>
+    <NavLink
+      to={to}
+      end={to === "/"}
+      className={({ isActive }) => cx(styles.item, isActive && styles.active)}
+      onClick={onNavigate}
+    >
       <Icon name={icon} />
       <span>{label}</span>
-    </button>
+    </NavLink>
   )
 }

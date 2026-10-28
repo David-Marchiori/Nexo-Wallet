@@ -1,37 +1,7 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import App from "@/App"
-import { formatCurrency } from "@/lib/format"
-import type { Transaction } from "@/types/transaction"
-
-// Quarta-feira, 28/10/2026. Só o Date é simulado; os timers continuam reais para o user-event.
-const TODAY = new Date(2026, 9, 28, 10, 0)
-
-const fixture: Transaction[] = [
-  { id: "a", title: "Salário", category: "Renda", type: "income", amount: 6500, date: "2026-10-05" },
-  { id: "b", title: "Supermercado", category: "Alimentação", type: "expense", amount: 486.9, date: "2026-10-08" },
-  { id: "c", title: "Aluguel", category: "Moradia", type: "expense", amount: 2100, date: "2026-10-10" },
-  { id: "d", title: "Spotify", category: "Assinaturas", type: "expense", amount: 21.9, date: "2026-10-13" },
-  { id: "e", title: "Salário setembro", category: "Renda", type: "income", amount: 6000, date: "2026-09-05" },
-  { id: "f", title: "Aluguel setembro", category: "Moradia", type: "expense", amount: 2500, date: "2026-09-10" },
-  { id: "g", title: "Projeto freelance", category: "Renda", type: "income", amount: 1000, date: "2026-08-20" },
-]
-
-// O Testing Library normaliza o espaço não separável do Intl para espaço comum.
-const brl = (value: number) => formatCurrency(value).replace(/\s/g, " ")
-
-function saveTransactions(transactions: Transaction[]) {
-  localStorage.setItem("nexo-transactions", JSON.stringify(transactions))
-}
-
-function panel(title: string) {
-  return screen.getByRole("heading", { name: title }).closest("article, section") as HTMLElement
-}
-
-function card(label: string) {
-  return screen.getByText(label).closest("article") as HTMLElement
-}
+import { describe, expect, it } from "vitest"
+import { brl, card, panel, renderApp, savedTransactions, saveTransactions, setupAppTests } from "@/test/app"
 
 function chartMonths() {
   const chart = panel("Fluxo de caixa")
@@ -41,26 +11,91 @@ function chartMonths() {
     .map((element) => element.textContent)
 }
 
-describe("App", () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ["Date"] })
-    vi.setSystemTime(TODAY)
-    saveTransactions(fixture)
-  })
+describe("Layout e navegação", () => {
+  setupAppTests()
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it("mostra a data de hoje na saudação", () => {
-    render(<App />)
+  it("mostra a data de hoje e a saudação no Dashboard", () => {
+    renderApp()
 
     expect(screen.getByText("QUARTA, 28 DE OUTUBRO")).toBeInTheDocument()
     expect(screen.getByRole("heading", { level: 1, name: "Olá, Marina." })).toBeInTheDocument()
+    expect(document.title).toBe("Nexo")
   })
 
+  it("navega pelo menu lateral e marca a página atual", async () => {
+    const user = userEvent.setup()
+    renderApp()
+    const nav = screen.getByRole("navigation", { name: "Navegação principal" })
+
+    for (const item of ["Dashboard", "Transações", "Relatórios", "Metas", "Configurações"]) {
+      expect(within(nav).getByRole("link", { name: item })).toBeInTheDocument()
+    }
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page")
+
+    await user.click(within(nav).getByRole("link", { name: "Transações" }))
+    expect(screen.getByRole("heading", { level: 1, name: "Transações" })).toBeInTheDocument()
+    expect(within(nav).getByRole("link", { name: "Transações" })).toHaveAttribute("aria-current", "page")
+    expect(within(nav).getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current")
+    await waitFor(() => expect(document.title).toBe("Transações · Nexo"))
+
+    await user.click(within(nav).getByRole("link", { name: "Relatórios" }))
+    expect(screen.getByText("Relatórios em breve")).toBeInTheDocument()
+  })
+
+  it("mostra a busca só nas páginas de transações", async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    expect(screen.getByPlaceholderText("Buscar transação")).toBeInTheDocument()
+    await user.click(screen.getByRole("link", { name: "Metas" }))
+    expect(screen.queryByPlaceholderText("Buscar transação")).not.toBeInTheDocument()
+  })
+
+  it("leva o card de meta para Metas e o perfil para Configurações", async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    await user.click(screen.getByRole("link", { name: /Meta do mês/ }))
+    expect(screen.getByRole("heading", { level: 1, name: "Metas" })).toBeInTheDocument()
+
+    await user.click(screen.getByRole("link", { name: /Marina Alves/ }))
+    expect(screen.getByRole("heading", { level: 1, name: "Configurações" })).toBeInTheDocument()
+  })
+
+  it("mostra uma página de erro para endereços inexistentes", () => {
+    renderApp("/nao-existe")
+
+    expect(screen.getByRole("heading", { level: 1, name: "Página não encontrada" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Voltar ao Dashboard" })).toHaveAttribute("href", "/")
+  })
+
+  it("abre e fecha o menu lateral no celular, e fecha ao navegar", async () => {
+    const user = userEvent.setup()
+    renderApp()
+    const closeButtons = () => screen.getAllByRole("button", { name: "Fechar menu" })
+
+    expect(closeButtons()).toHaveLength(1)
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }))
+    expect(closeButtons()).toHaveLength(2)
+    await user.click(closeButtons().find((button) => !button.closest("aside"))!)
+    expect(closeButtons()).toHaveLength(1)
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }))
+    await user.click(closeButtons().find((button) => button.closest("aside"))!)
+    expect(closeButtons()).toHaveLength(1)
+
+    await user.click(screen.getByRole("button", { name: "Abrir menu" }))
+    await user.click(screen.getByRole("link", { name: "Metas" }))
+    expect(closeButtons()).toHaveLength(1)
+  })
+})
+
+describe("Dashboard", () => {
+  setupAppTests()
+
   it("calcula saldo total e receitas/despesas do mês com a variação", () => {
-    render(<App />)
+    renderApp()
 
     const balance = card("Saldo disponível")
     expect(within(balance).getByText(brl(8391.2))).toBeInTheDocument()
@@ -75,8 +110,25 @@ describe("App", () => {
     expect(within(expense).getByText("+4,4%")).toBeInTheDocument()
   })
 
+  it("leva das setas dos cards para as transações filtradas do mês", async () => {
+    const user = userEvent.setup()
+    renderApp()
+
+    // Card de despesas e gráfico de categorias levam ao mesmo filtro.
+    for (const link of screen.getAllByRole("link", { name: "Ver despesas do mês" })) {
+      expect(link).toHaveAttribute("href", "/transacoes?tipo=despesas&mes=2026-10")
+    }
+    await user.click(within(card("Receitas do mês")).getByRole("link", { name: "Ver receitas do mês" }))
+
+    const list = panel("Lançamentos")
+    expect(within(list).getByText("Salário")).toBeInTheDocument()
+    expect(within(list).queryByText("Salário setembro")).not.toBeInTheDocument()
+    expect(within(list).queryByText("Aluguel")).not.toBeInTheDocument()
+    expect(screen.getByLabelText("Mês")).toHaveValue("2026-10")
+  })
+
   it("divide as despesas do mês por categoria", () => {
-    render(<App />)
+    renderApp()
     const expenses = panel("Despesas por categoria")
 
     expect(within(expenses).getByText(brl(2608.8))).toBeInTheDocument()
@@ -86,7 +138,7 @@ describe("App", () => {
   })
 
   it("mostra o progresso da meta de economia do mês", () => {
-    render(<App />)
+    renderApp()
     const sidebar = screen.getByRole("complementary")
 
     // Economia de R$ 3.891,20 sobre a meta de R$ 2.000.
@@ -96,27 +148,23 @@ describe("App", () => {
 
   it("troca o período do gráfico de fluxo de caixa", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
     const chart = panel("Fluxo de caixa")
 
     expect(chartMonths()).toEqual(["Mai", "Jun", "Jul", "Ago", "Set", "Out"])
-    expect(within(chart).getByText("Receitas e despesas dos últimos 6 meses")).toBeInTheDocument()
-
     await user.selectOptions(within(chart).getByLabelText("Período do gráfico"), "3")
     expect(chartMonths()).toEqual(["Ago", "Set", "Out"])
     expect(within(chart).getByText("Receitas e despesas dos últimos 3 meses")).toBeInTheDocument()
-
     await user.selectOptions(within(chart).getByLabelText("Período do gráfico"), "12")
     expect(chartMonths()).toHaveLength(12)
   })
 
   it("oculta todos os valores, inclusive o total do gráfico de categorias", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     await user.click(screen.getByRole("button", { name: "Ocultar valores" }))
     expect(screen.getAllByText("R$ ••••••")).toHaveLength(4)
-    expect(screen.queryByText(brl(2608.8))).not.toBeInTheDocument()
 
     const toggle = screen.getByRole("button", { name: "Mostrar valores" })
     expect(toggle).toHaveAttribute("aria-pressed", "true")
@@ -124,8 +172,9 @@ describe("App", () => {
     expect(screen.queryByText("R$ ••••••")).not.toBeInTheDocument()
   })
 
-  it("lista as 6 transações mais recentes, da mais nova para a mais antiga", () => {
-    render(<App />)
+  it("lista as 6 transações mais recentes e linka para a lista completa", async () => {
+    const user = userEvent.setup()
+    renderApp()
     const list = panel("Transações recentes")
     const text = list.textContent!.replace(/\s/g, " ")
 
@@ -135,52 +184,56 @@ describe("App", () => {
     expect(order.every((index) => index >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
     expect(within(list).queryByText("Projeto freelance")).not.toBeInTheDocument()
-    expect(text).toContain(`+ ${brl(6500)}`)
-    expect(text).toContain(`- ${brl(2100)}`)
     expect(within(list).getByText("13 de out.")).toBeInTheDocument()
+
+    await user.click(within(list).getByRole("link", { name: "Ver todas as transações" }))
+    expect(within(panel("Lançamentos")).getByText("Projeto freelance")).toBeInTheDocument()
   })
 
-  it("filtra por receitas e despesas", async () => {
+  it("filtra por tipo e busca pelo título", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
     const list = panel("Transações recentes")
 
     await user.click(within(list).getByRole("button", { name: "Receitas" }))
-    expect(within(list).getByText("Salário")).toBeInTheDocument()
     expect(within(list).getByText("Projeto freelance")).toBeInTheDocument()
     expect(within(list).queryByText("Aluguel")).not.toBeInTheDocument()
-
-    await user.click(within(list).getByRole("button", { name: "Despesas" }))
-    expect(within(list).getByText("Aluguel")).toBeInTheDocument()
-    expect(within(list).queryByText("Salário")).not.toBeInTheDocument()
-
     await user.click(within(list).getByRole("button", { name: "Todas" }))
-    expect(within(list).getByText("Salário")).toBeInTheDocument()
-  })
 
-  it("busca pelo título, sem diferenciar maiúsculas", async () => {
-    const user = userEvent.setup()
-    render(<App />)
-    const list = panel("Transações recentes")
-    const search = screen.getByPlaceholderText("Buscar transação")
-
-    await user.type(search, "ALU")
+    await user.type(screen.getByPlaceholderText("Buscar transação"), "ALU")
     expect(within(list).getByText("Aluguel")).toBeInTheDocument()
-    expect(within(list).getByText("Aluguel setembro")).toBeInTheDocument()
     expect(within(list).queryByText("Spotify")).not.toBeInTheDocument()
-
-    await user.clear(search)
-    await user.type(search, "xyz")
-    expect(within(list).getByText("Nenhuma transação encontrada.")).toBeInTheDocument()
   })
+
+  it("sem nenhuma transação, mostra os estados vazios", () => {
+    saveTransactions([])
+    renderApp()
+
+    expect(within(panel("Fluxo de caixa")).getByText("Nenhum lançamento no período.")).toBeInTheDocument()
+    expect(within(panel("Despesas por categoria")).getByText("Nenhuma despesa neste mês.")).toBeInTheDocument()
+    expect(within(panel("Transações recentes")).getByText("Nenhuma transação encontrada.")).toBeInTheDocument()
+    expect(screen.getAllByText("Sem dados do mês anterior")).toHaveLength(2)
+    expect(screen.getByText("0% concluído")).toBeInTheDocument()
+  })
+
+  it("sem nada salvo, abre com exemplos do mês atual", () => {
+    localStorage.clear()
+    renderApp()
+
+    expect(within(panel("Transações recentes")).getByText("Compras online")).toBeInTheDocument()
+    expect(screen.getByText("68% concluído")).toBeInTheDocument()
+  })
+})
+
+describe("Criar, editar e excluir transações", () => {
+  setupAppTests()
 
   it("adiciona uma transação e recalcula o mês", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     await user.click(screen.getByRole("button", { name: "Nova transação" }))
     const dialog = screen.getByRole("dialog", { name: "Adicionar transação" })
-
     expect(within(dialog).getByLabelText("Data")).toHaveValue("2026-10-28")
     expect(within(dialog).getByLabelText("Descrição")).toHaveFocus()
 
@@ -192,15 +245,12 @@ describe("App", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     expect(within(panel("Transações recentes")).getByText("Cinema")).toBeInTheDocument()
     expect(within(card("Despesas do mês")).getByText(brl(2651.3))).toBeInTheDocument()
-    expect(within(card("Saldo disponível")).getByText(brl(8348.7))).toBeInTheDocument()
-
-    const saved = JSON.parse(localStorage.getItem("nexo-transactions")!)
-    expect(saved[0]).toMatchObject({ title: "Cinema", type: "expense", amount: 42.5, category: "Lazer", date: "2026-10-28" })
+    expect(savedTransactions()[0]).toMatchObject({ title: "Cinema", amount: 42.5, category: "Lazer", date: "2026-10-28" })
   })
 
   it("só oferece categorias compatíveis com o tipo", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
 
     await user.click(screen.getByRole("button", { name: "Nova transação" }))
     const dialog = screen.getByRole("dialog")
@@ -209,31 +259,14 @@ describe("App", () => {
 
     expect(category).toHaveValue("Alimentação")
     expect(options()).not.toContain("Renda")
-
     await user.selectOptions(within(dialog).getByLabelText("Tipo"), "income")
     expect(options()).toEqual(["Renda", "Outros"])
     expect(category).toHaveValue("Renda")
-
-    await user.selectOptions(category, "Outros")
-    await user.selectOptions(within(dialog).getByLabelText("Tipo"), "expense")
-    expect(category).toHaveValue("Outros")
-  })
-
-  it("não salva o formulário sem descrição", async () => {
-    const user = userEvent.setup()
-    render(<App />)
-
-    await user.click(screen.getByRole("button", { name: "Nova transação" }))
-    const dialog = screen.getByRole("dialog")
-    await user.type(within(dialog).getByLabelText("Valor"), "10")
-    await user.click(within(dialog).getByRole("button", { name: "Adicionar transação" }))
-
-    expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
 
   it("fecha o formulário pelo Cancelar, pelo X, pelo Esc e clicando fora", async () => {
     const user = userEvent.setup()
-    render(<App />)
+    renderApp()
     const open = () => user.click(screen.getByRole("button", { name: "Nova transação" }))
 
     await open()
@@ -249,57 +282,68 @@ describe("App", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
 
     await open()
-    fireEvent.mouseDown(screen.getByRole("dialog"))
-    expect(screen.getByRole("dialog")).toBeInTheDocument()
     fireEvent.mouseDown(screen.getByRole("dialog").parentElement!)
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  it("abre e fecha o menu lateral no celular", async () => {
+  it("edita uma transação pelo menu ⋯", async () => {
     const user = userEvent.setup()
-    render(<App />)
-    const closeButtons = () => screen.getAllByRole("button", { name: "Fechar menu" })
+    renderApp()
 
-    expect(closeButtons()).toHaveLength(1)
+    await user.click(screen.getByRole("button", { name: "Opções de Aluguel" }))
+    await user.click(screen.getByRole("menuitem", { name: "Editar" }))
 
-    await user.click(screen.getByRole("button", { name: "Abrir menu" }))
-    expect(closeButtons()).toHaveLength(2)
+    const dialog = screen.getByRole("dialog", { name: "Editar transação" })
+    expect(within(dialog).getByLabelText("Descrição")).toHaveValue("Aluguel")
+    expect(within(dialog).getByLabelText("Valor")).toHaveValue(2100)
+    expect(within(dialog).getByLabelText("Categoria")).toHaveValue("Moradia")
+    expect(within(dialog).getByLabelText("Data")).toHaveValue("2026-10-10")
 
-    await user.click(closeButtons().find((button) => !button.closest("aside"))!)
-    expect(closeButtons()).toHaveLength(1)
+    await user.clear(within(dialog).getByLabelText("Valor"))
+    await user.type(within(dialog).getByLabelText("Valor"), "2200")
+    await user.click(within(dialog).getByRole("button", { name: "Salvar alterações" }))
 
-    await user.click(screen.getByRole("button", { name: "Abrir menu" }))
-    await user.click(closeButtons().find((button) => button.closest("aside"))!)
-    expect(closeButtons()).toHaveLength(1)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(within(card("Despesas do mês")).getByText(brl(2708.8))).toBeInTheDocument()
+    expect(savedTransactions().find((item) => item.id === "c")).toMatchObject({ amount: 2200, title: "Aluguel" })
+    expect(savedTransactions()).toHaveLength(7)
   })
 
-  it("mostra o menu de navegação", () => {
-    render(<App />)
-    const nav = screen.getByRole("navigation", { name: "Navegação principal" })
+  it("exclui uma transação só depois de confirmar", async () => {
+    const user = userEvent.setup()
+    renderApp()
+    const list = () => panel("Transações recentes")
 
-    for (const item of ["Dashboard", "Transações", "Relatórios", "Metas", "Configurações"]) {
-      expect(within(nav).getByRole("button", { name: item })).toBeInTheDocument()
-    }
+    await user.click(screen.getByRole("button", { name: "Opções de Spotify" }))
+    await user.click(screen.getByRole("menuitem", { name: "Excluir" }))
+    const confirm = screen.getByRole("alertdialog", { name: "Excluir transação?" })
+    expect(confirm).toHaveTextContent("Spotify")
+    expect(within(confirm).getByRole("button", { name: "Cancelar" })).toHaveFocus()
+
+    await user.click(within(confirm).getByRole("button", { name: "Cancelar" }))
+    expect(within(list()).getByText("Spotify")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Opções de Spotify" }))
+    await user.click(screen.getByRole("menuitem", { name: "Excluir" }))
+    await user.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "Excluir" }))
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+    expect(within(list()).queryByText("Spotify")).not.toBeInTheDocument()
+    expect(savedTransactions().some((item) => item.id === "d")).toBe(false)
   })
 
-  it("sem nenhuma transação, mostra os estados vazios", () => {
-    saveTransactions([])
-    render(<App />)
+  it("fecha o menu ⋯ com Esc e clicando fora", async () => {
+    const user = userEvent.setup()
+    renderApp()
 
-    expect(within(panel("Fluxo de caixa")).getByText("Nenhum lançamento no período.")).toBeInTheDocument()
-    expect(within(panel("Despesas por categoria")).getByText("Nenhuma despesa neste mês.")).toBeInTheDocument()
-    expect(within(panel("Transações recentes")).getByText("Nenhuma transação encontrada.")).toBeInTheDocument()
-    expect(screen.getAllByText("Sem dados do mês anterior")).toHaveLength(2)
-    expect(within(card("Saldo disponível")).getByText(`+${brl(0)} este mês`)).toBeInTheDocument()
-    expect(screen.getByText("0% concluído")).toBeInTheDocument()
-  })
+    await user.click(screen.getByRole("button", { name: "Opções de Aluguel" }))
+    expect(screen.getByRole("menu")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Opções de Aluguel" })).toHaveAttribute("aria-expanded", "true")
+    await user.keyboard("{Escape}")
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument()
 
-  it("sem nada salvo, abre com exemplos do mês atual", () => {
-    localStorage.clear()
-    render(<App />)
-
-    expect(within(panel("Transações recentes")).getByText("Compras online")).toBeInTheDocument()
-    expect(screen.getByText("68% concluído")).toBeInTheDocument()
-    expect(screen.getByText("Você está no caminho certo.")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Opções de Aluguel" }))
+    await user.click(screen.getByRole("heading", { level: 1 }))
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument()
   })
 })

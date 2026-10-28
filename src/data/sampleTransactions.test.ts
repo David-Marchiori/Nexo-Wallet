@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { categoriesFor } from "@/data/categories"
 import { createSampleTransactions, isLegacySample } from "@/data/sampleTransactions"
-import { currentUser } from "@/data/user"
+import { defaultSettings } from "@/data/defaultSettings"
 import { savingsGoalStatus, summarizeMonth } from "@/lib/analytics"
 import { loadTransactions, saveTransactions } from "@/lib/storage"
 
@@ -31,7 +31,7 @@ describe("createSampleTransactions", () => {
 
   it("fecha o mês atual em 68% da meta, como no design", () => {
     const month = summarizeMonth(samples, "2026-10")
-    expect(savingsGoalStatus(month, currentUser.monthlySavingsGoal).progress).toBe(68)
+    expect(savingsGoalStatus(month, defaultSettings.monthlySavingsGoal).progress).toBe(68)
   })
 
   it("no começo do mês só inclui o que já aconteceu", () => {

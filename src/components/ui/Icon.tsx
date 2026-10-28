@@ -14,7 +14,6 @@ export type IconName =
   | "eyeOff"
   | "more"
   | "search"
-  | "bell"
   | "chevron"
   | "close"
   | "calendar"
@@ -101,12 +100,6 @@ const iconPaths: Record<IconName, ReactNode> = {
     <>
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-4-4" />
-    </>
-  ),
-  bell: (
-    <>
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-      <path d="M10 21h4" />
     </>
   ),
   chevron: <path d="m9 18 6-6-6-6" />,

@@ -1,4 +1,4 @@
-import { IconButton } from "@/components/ui/IconButton"
+import { IconLink } from "@/components/ui/IconButton"
 import { Panel, PanelHeading } from "@/components/ui/Panel"
 import type { ExpenseShare } from "@/lib/analytics"
 import styles from "./ExpensesByCategory.module.css"
@@ -11,6 +11,8 @@ type ExpensesByCategoryProps = {
   /** Total já formatado (ou mascarado). */
   total: string
   shares: ExpenseShare[]
+  /** Link para as despesas do mês. */
+  detailsTo: string
 }
 
 function colorOf(share: ExpenseShare, index: number) {
@@ -29,13 +31,13 @@ function donutGradient(shares: ExpenseShare[]): string {
   return `conic-gradient(${slices.join(", ")})`
 }
 
-export function ExpensesByCategory({ total, shares }: ExpensesByCategoryProps) {
+export function ExpensesByCategory({ total, shares, detailsTo }: ExpensesByCategoryProps) {
   return (
     <Panel className={styles.panel}>
       <PanelHeading
         title="Despesas por categoria"
         description="Distribuição deste mês"
-        action={<IconButton icon="more" label="Mais opções" />}
+        action={<IconLink variant="circle" icon="chevron" iconSize={17} label="Ver despesas do mês" to={detailsTo} />}
       />
       <div className={styles.donutWrap}>
         <div className={styles.donut} style={{ background: donutGradient(shares) }}>

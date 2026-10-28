@@ -38,5 +38,10 @@ export function useTransactions() {
     setTransactions((current) => current.filter((item) => item.id !== id))
   }, [])
 
-  return { transactions, totals, addTransaction, updateTransaction, removeTransaction }
+  /** Troca a lista inteira (importar backup, restaurar exemplos, apagar tudo). */
+  const replaceTransactions = useCallback((next: Transaction[]) => {
+    setTransactions(next)
+  }, [])
+
+  return { transactions, totals, addTransaction, updateTransaction, removeTransaction, replaceTransactions }
 }

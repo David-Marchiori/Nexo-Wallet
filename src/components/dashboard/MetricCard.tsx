@@ -1,5 +1,5 @@
 import { Icon } from "@/components/ui/Icon"
-import { IconButton } from "@/components/ui/IconButton"
+import { IconLink } from "@/components/ui/IconButton"
 import { cx } from "@/lib/cx"
 import styles from "./MetricCard.module.css"
 
@@ -14,10 +14,11 @@ type MetricCardProps = {
   change: string | null
   /** Se a variação é boa (verde) ou ruim (vermelho) para quem lê. */
   changeTone: ChangeTone
-  actionLabel: string
+  /** Link para os detalhes, ex.: transações de receita do mês. */
+  action: { label: string; to: string }
 }
 
-export function MetricCard({ variant, label, value, change, changeTone, actionLabel }: MetricCardProps) {
+export function MetricCard({ variant, label, value, change, changeTone, action }: MetricCardProps) {
   return (
     <article className={styles.card}>
       <div className={cx(styles.icon, styles[variant])}>
@@ -34,7 +35,7 @@ export function MetricCard({ variant, label, value, change, changeTone, actionLa
           </small>
         )}
       </div>
-      <IconButton variant="circle" icon="chevron" iconSize={17} label={actionLabel} />
+      <IconLink variant="circle" icon="chevron" iconSize={17} label={action.label} to={action.to} />
     </article>
   )
 }

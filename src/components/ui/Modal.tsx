@@ -7,10 +7,12 @@ type ModalProps = {
   eyebrow: string
   title: string
   onClose: () => void
+  /** `alertdialog` para confirmações que pedem uma decisão. */
+  role?: "dialog" | "alertdialog"
   children: ReactNode
 }
 
-export function Modal({ eyebrow, title, onClose, children }: ModalProps) {
+export function Modal({ eyebrow, title, onClose, role = "dialog", children }: ModalProps) {
   const titleId = useId()
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function Modal({ eyebrow, title, onClose, children }: ModalProps) {
     <div className={styles.backdrop} role="presentation" onMouseDown={onClose}>
       <section
         className={styles.modal}
-        role="dialog"
+        role={role}
         aria-modal="true"
         aria-labelledby={titleId}
         onMouseDown={(event) => event.stopPropagation()}
@@ -41,4 +43,9 @@ export function Modal({ eyebrow, title, onClose, children }: ModalProps) {
       </section>
     </div>
   )
+}
+
+/** Linha de botões no rodapé do modal; no celular, empilhados com o principal por cima. */
+export function ModalActions({ children }: { children: ReactNode }) {
+  return <div className={styles.actions}>{children}</div>
 }

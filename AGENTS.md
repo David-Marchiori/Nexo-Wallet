@@ -12,18 +12,23 @@ Uses **npm** (Node 24). No server is started automatically.
 - `npm test` - Run the Vitest suite once (`npm run test:watch` to keep it running)
 - `npm run build` - Type-check, then build to `dist/`
 
+The app uses browser URLs (`/transacoes`, `/metas`…). On static hosting, rewrite every path to `/index.html` (e.g. Netlify `_redirects`: `/* /index.html 200`), or reloading a page other than `/` returns 404. `npm run dev` and `npm run preview` already do this.
+
 ## Project Structure
 
 - `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx`
-- `src/App.tsx` - App shell: sidebar, topbar, current page and the new-transaction modal; owns `useTransactions`, search and mobile-menu state
-- `src/pages/` - One component per screen (`Dashboard.tsx` for now)
-- `src/components/ui/` - Generic building blocks: `Icon`, `Button`, `IconButton`, `Modal`, `FormField`/`FormRow`, `Panel`/`PanelHeading`, `SearchInput`, `Eyebrow`
-- `src/components/layout/` - `Sidebar` (with `NavItem`, `GoalCard`, `ProfileCard`) and `Topbar`
+- `src/App.tsx` - Creates the browser router from `src/routes.tsx`
+- `src/routes.tsx` - Route table (React Router 8, data router). Each route's `handle` sets the topbar title/description and whether the search box shows
+- `src/components/layout/AppLayout.tsx` - Shell for every page: sidebar, topbar, `<Outlet>`, the create/edit transaction modal and the delete confirmation. Pages read `search`, `currentMonth`, `editTransaction` and `deleteTransaction` through `useLayoutContext()`
+- `src/context/AppDataContext.tsx` - `AppDataProvider` plus `useTransactionsStore()` and `useSettingsStore()`; the single source of transactions and settings
+- `src/pages/` - `Dashboard`, `Transactions` (full list, filters in the URL), `Goals`, `Settings` (profile, backup, reset), `Reports` (placeholder), `NotFound`
+- `src/components/ui/` - Generic building blocks: `Icon`, `Button`/`ButtonLink`, `IconButton`/`IconLink`, `Modal`/`ModalActions`, `ConfirmDialog`, `ActionMenu`, `FormField`/`FormRow`, `Panel`/`PanelHeading`, `ProgressBar`, `MessagePanel`, `SearchInput`, `Eyebrow`
+- `src/components/layout/` - `AppLayout`, `Sidebar` (with `NavItem`, `GoalCard`, `ProfileCard`) and `Topbar`
 - `src/components/dashboard/` - `BalanceCard`, `MetricCard`, `CashflowChart`, `ExpensesByCategory`
-- `src/components/transactions/` - `TransactionList`, `TransactionRow`, `FilterTabs`, `TransactionFormModal`
-- `src/hooks/useTransactions.ts` - Transactions state, persistence, totals, add/update/remove
-- `src/lib/` - Pure helpers: `analytics` (monthly totals, cash flow, expense shares, savings goal), `storage` (localStorage with validation), `date`, `format`, `id`, `cx`
-- `src/data/` - Static data: categories (color tone and which transaction type each one allows), sample transactions generated relative to today, current user and monthly savings goal
+- `src/components/transactions/` - `TransactionList`, `TransactionRow`, `FilterTabs`, `TransactionFormModal` (create and edit)
+- `src/hooks/` - `useTransactions` (state, persistence, totals, add/update/remove/replace) and `useSettings` (name and savings goal)
+- `src/lib/` - Pure helpers: `analytics` (monthly totals, cash flow, expense shares, savings goal), `transactionFilters` (URL filters and filtering), `storage` (localStorage with validation), `backup` (export/import JSON), `profile`, `date`, `format`, `id`, `cx`
+- `src/data/` - Static data: categories (color tone and which transaction type each one allows), sample transactions generated relative to today, default settings
 - `src/types/` - Shared TypeScript types
 - `src/styles/reset.css` - Base reset (copy of Tailwind v4 Preflight) inside `@layer base`
 - `src/index.css` - Fonts, reset import, color tokens on `:root`, `body` defaults
@@ -31,7 +36,11 @@ Uses **npm** (Node 24). No server is started automatically.
 ## Conventions
 
 - Import across folders with the `@/` alias (`@/components/ui/Button`).
-- Components receive data through props; formatting lives in `src/lib/format.ts`, calculations in `src/lib/analytics.ts`.
+- Import routing APIs from `react-router` (pinned to `~8.4.0`).
+- Pages get data from the stores and the layout context; components below pages receive data through props. Formatting lives in `src/lib/format.ts`, calculations in `src/lib/analytics.ts`.
+- Links to the transactions page go through `transactionsPath({ type, month, category })`; URL params are in Portuguese (`/transacoes?tipo=despesas&mes=2026-10&categoria=Moradia`).
+- Destructive actions (delete, import, reset) always go through `ConfirmDialog`.
+- localStorage keys: `nexo-transactions` and `nexo-settings`. Everything read from storage or a backup file is validated in `src/lib/storage.ts`.
 - Months are `AAAA-MM` strings and dates are `AAAA-MM-DD` strings, always in local time (`toISODate`, `monthOf`, `shiftMonth`). Never use `toISOString()` for dates.
 - Dashboard cards: income and expenses are for the current month; balance is cumulative across all transactions.
 - Icon-only buttons use `IconButton`, which requires a `label` (becomes `aria-label`).
@@ -49,4 +58,6 @@ The reset lives in `@layer base`, so any unlayered rule in `index.css` or a modu
 
 ## Testing
 
-Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears localStorage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed. `src/App.test.tsx` covers the main user flows with a fixed transaction set and a fixed date (`vi.useFakeTimers({ toFake: ["Date"] })` + `vi.setSystemTime`), so only `Date` is faked and user-event keeps working.
+Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears storage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed.
+
+For anything that renders the app, use `src/test/app.tsx`: call `setupAppTests()` inside the `describe` (fixed date 2026-10-28 and a known transaction set) and `renderApp("/path")` to mount the real routes in a memory router. Only `Date` is faked (`vi.useFakeTimers({ toFake: ["Date"] })`), so user-event keeps working. `src/App.test.tsx` covers layout, navigation and the dashboard; each page has its own `*.test.tsx` in `src/pages/`.

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { loadTransactions, saveTransactions } from "@/lib/storage"
+import { loadSettings, loadTransactions, saveSettings, saveTransactions } from "@/lib/storage"
 import type { Transaction } from "@/types/transaction"
 
 const KEY = "nexo-transactions"
@@ -72,5 +72,25 @@ describe("saveTransactions", () => {
       throw new Error("QuotaExceededError")
     })
     expect(() => saveTransactions([])).not.toThrow()
+  })
+})
+
+describe("configurações", () => {
+  it("retorna null quando não há nada salvo", () => {
+    expect(loadSettings()).toBeNull()
+  })
+
+  it("salva e lê de volta", () => {
+    saveSettings({ name: "Ana Souza", monthlySavingsGoal: 1500 })
+    expect(loadSettings()).toEqual({ name: "Ana Souza", monthlySavingsGoal: 1500 })
+  })
+
+  it.each([
+    ["nome vazio", { name: "  ", monthlySavingsGoal: 100 }],
+    ["meta negativa", { name: "Ana", monthlySavingsGoal: -1 }],
+    ["meta não numérica", { name: "Ana", monthlySavingsGoal: "100" }],
+  ])("recusa %s", (_, value) => {
+    localStorage.setItem("nexo-settings", JSON.stringify(value))
+    expect(loadSettings()).toBeNull()
   })
 })

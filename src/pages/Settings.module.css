@@ -1,0 +1,80 @@
+.stack {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel {
+  padding: 22px 23px;
+}
+
+.panel.danger {
+  border-color: #f5d5da;
+}
+
+.profileForm {
+  margin-top: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+/* Alinha avatar e botão com o campo (o campo tem margem embaixo). */
+.profileForm > button {
+  margin-bottom: 15px;
+  height: 44px;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 15px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ece7ff;
+  color: #6040cf;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.fileInput {
+  display: none;
+}
+
+.feedback {
+  margin: 14px 0 0;
+  font-size: 12px;
+}
+
+.success {
+  color: var(--green);
+}
+
+.error {
+  color: var(--red);
+}
+
+@media (max-width: 620px) {
+  .panel {
+    padding: 18px 15px;
+  }
+
+  .profileForm {
+    flex-wrap: wrap;
+  }
+
+  .profileForm > button,
+  .actions > button {
+    width: 100%;
+  }
+}

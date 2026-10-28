@@ -1,0 +1,143 @@
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.panel {
+  padding: 22px 23px;
+}
+
+.history {
+  grid-column: 1 / -1;
+}
+
+.form {
+  margin-top: 18px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+/* Alinha o botão com o campo (o campo tem margem embaixo). */
+.form > button {
+  margin-bottom: 15px;
+  height: 44px;
+}
+
+.feedback {
+  margin: 0;
+  color: var(--green);
+  font-size: 12px;
+}
+
+.amount {
+  margin: 18px 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.amount strong {
+  margin-right: 4px;
+  color: var(--ink);
+  font: 700 26px 'Manrope', sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.caption {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.months {
+  margin: 16px 0 0;
+}
+
+.months li {
+  min-height: 52px;
+  border-top: 1px solid #f1eef4;
+  display: grid;
+  grid-template-columns: 150px 120px 1fr 150px;
+  align-items: center;
+  gap: 16px;
+}
+
+.monthName {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.monthValue {
+  text-align: right;
+  font: 600 12px 'Manrope', sans-serif;
+}
+
+.badge {
+  justify-self: end;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.reached {
+  color: #1e9e7e;
+  background: #e7f6f1;
+}
+
+.ongoing {
+  color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.missed {
+  color: #b9475a;
+  background: #fcecef;
+}
+
+@media (max-width: 820px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .months li {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "name badge"
+      "value value"
+      "bar bar";
+    padding: 12px 0;
+    gap: 6px 12px;
+  }
+
+  .monthName {
+    grid-area: name;
+  }
+
+  .badge {
+    grid-area: badge;
+  }
+
+  .monthValue {
+    grid-area: value;
+    text-align: left;
+  }
+
+  .bar {
+    grid-area: bar;
+  }
+}
+
+@media (max-width: 620px) {
+  .panel {
+    padding: 18px 15px;
+  }
+
+  .form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+}

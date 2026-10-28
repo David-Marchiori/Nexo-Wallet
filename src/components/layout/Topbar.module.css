@@ -24,21 +24,6 @@
   gap: 10px;
 }
 
-.notification {
-  position: relative;
-}
-
-.notification i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  position: absolute;
-  right: 9px;
-  top: 8px;
-  background: var(--purple);
-  box-shadow: 0 0 0 2px white;
-}
-
 .menuButton {
   display: none;
 }
@@ -93,8 +78,7 @@
     font-size: 23px;
   }
 
-  .greeting p,
-  .actions .notification {
+  .greeting p {
     display: none;
   }
 
