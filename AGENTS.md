@@ -7,12 +7,30 @@ Personal finance dashboard. React + Vite + TypeScript with CSS Modules, original
 Uses **npm** (Node 24). No server is started automatically.
 
 - `npm install` - Install dependencies
-- `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload
+- `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload. It also serves `/api/<name>` from `api/<name>.ts` (a small plugin in `vite.config.ts`), so voice entry works locally once `ANTHROPIC_API_KEY` is in `.env.local` (see `.env.example`)
 - `npm run typecheck` - Run `tsc --noEmit`
 - `npm test` - Run the Vitest suite once (`npm run test:watch` to keep it running)
 - `npm run build` - Type-check, then build to `dist/`
 
-The app uses browser URLs (`/transacoes`, `/metas`…). On static hosting, rewrite every path to `/index.html` (e.g. Netlify `_redirects`: `/* /index.html 200`), or reloading a page other than `/` returns 404. `npm run dev` and `npm run preview` already do this.
+The app uses browser URLs (`/transacoes`, `/metas`…). On static hosting, rewrite every path to `/index.html`, or reloading a page other than `/` returns 404. Production runs on Vercel, where `vercel.json` does this for every path except `/api/`. `npm run dev` and `npm run preview` already do this.
+
+## Voice Entry
+
+The "Nova transação" form has a microphone button (create mode only, hidden in browsers without the Web Speech API, such as Firefox):
+
+1. `src/hooks/useSpeechRecognition.ts` - The browser transcribes one sentence in pt-BR (it asks for microphone permission; needs https or localhost)
+2. `src/lib/voiceTransaction.ts` - Sends `{ text, today }` to `/api/parse-transaction` and validates the reply (`toVoiceDraft`) before it touches the form
+3. `api/parse-transaction.ts` - Vercel Function that asks Claude (`claude-haiku-5-5`, JSON structured output) for type, amount, category, title and date
+4. The form is filled for review; nothing is saved until the user confirms
+
+Environment variables (Vercel project settings, or `.env.local` for `npm run dev`): `ANTHROPIC_API_KEY` (required) and `ANTHROPIC_MODEL` (optional). Never prefix them with `VITE_`: Vite inlines `VITE_*` variables into the browser bundle. The function has no login in front of it, so it caps the input at 300 characters and `max_tokens` at 300; a monthly spend limit on the Anthropic account is the safety net.
+
+Rules for `api/`:
+
+- Vercel deploys each file in `api/` on its own and does not bundle relative imports, so a function must not import from `src/` or from other files. It keeps its own copy of the categories; `api/_parse-transaction.test.ts` fails if it drifts from `src/data/categories.ts`.
+- Vercel skips files that start with `_`, so tests in `api/` are named `_<name>.test.ts`. They run in the `node` environment (`// @vitest-environment node`).
+- Functions export Web handlers (`export async function POST(request: Request): Promise<Response>`).
+- Log the error reason only, never the user's sentence: it contains financial data.
 
 ## Project Structure
 
@@ -26,8 +44,9 @@ The app uses browser URLs (`/transacoes`, `/metas`…). On static hosting, rewri
 - `src/components/layout/` - `AppLayout`, `Sidebar` (with `NavItem`, `GoalCard`, `ProfileCard`) and `Topbar`
 - `src/components/dashboard/` - `BalanceCard`, `MetricCard`, `CashflowChart`, `ExpensesByCategory`
 - `src/components/transactions/` - `TransactionList`, `TransactionRow`, `FilterTabs`, `TransactionFormModal` (create and edit)
-- `src/hooks/` - `useTransactions` (state, persistence, totals, add/update/remove/replace) and `useSettings` (name and savings goal)
-- `src/lib/` - Pure helpers: `analytics` (monthly totals, cash flow, expense shares, savings goal), `transactionFilters` (URL filters and filtering), `storage` (localStorage with validation), `backup` (export/import JSON), `profile`, `date`, `format`, `id`, `cx`
+- `src/hooks/` - `useTransactions` (state, persistence, totals, add/update/remove/replace), `useSettings` (name and savings goal) and `useSpeechRecognition` (voice entry)
+- `src/lib/` - Pure helpers: `analytics` (monthly totals, cash flow, expense shares, savings goal), `transactionFilters` (URL filters and filtering), `storage` (localStorage with validation), `backup` (export/import JSON), `voiceTransaction` (voice entry client and validation), `profile`, `date`, `format`, `id`, `cx`
+- `api/` - Vercel Functions (see Voice Entry)
 - `src/data/` - Static data: categories (color tone and which transaction type each one allows), sample transactions generated relative to today, default settings
 - `src/types/` - Shared TypeScript types
 - `src/styles/reset.css` - Base reset (copy of Tailwind v4 Preflight) inside `@layer base`
@@ -61,3 +80,5 @@ The reset lives in `@layer base`, so any unlayered rule in `index.css` or a modu
 Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/setup.ts` (clears storage and cleans up between tests). Tests sit next to the code (`*.test.ts(x)`). Query by role, label or text, not by CSS class: module class names are hashed.
 
 For anything that renders the app, use `src/test/app.tsx`: call `setupAppTests()` inside the `describe` (fixed date 2026-10-28 and a known transaction set) and `renderApp("/path")` to mount the real routes in a memory router. Only `Date` is faked (`vi.useFakeTimers({ toFake: ["Date"] })`), so user-event keeps working. `src/App.test.tsx` covers layout, navigation and the dashboard; each page has its own `*.test.tsx` in `src/pages/`.
+
+Voice entry tests never touch a real microphone or the network: `TransactionFormModal.test.tsx` stubs `webkitSpeechRecognition` with a fake that the test drives (`hear`, `finish`, `fail`) and stubs `fetch` with `vi.stubGlobal`.
