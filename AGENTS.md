@@ -18,7 +18,7 @@ The app uses browser URLs (`/transacoes`, `/metas`…). On static hosting, rewri
 
 The "Nova transação" form has a microphone button (create mode only, hidden in browsers without the Web Speech API, such as Firefox):
 
-1. `src/hooks/useSpeechRecognition.ts` - The browser transcribes one sentence in pt-BR (it asks for microphone permission; needs https or localhost)
+1. `src/hooks/useSpeechRecognition.ts` - The browser transcribes one sentence in pt-BR (it asks for microphone permission; needs https or localhost). Every session ends with exactly one `onResult` or `onError`, enforced by timeouts (`START_TIMEOUT_MS`, `SILENCE_MS`, `MAX_LISTEN_MS`, `STOP_GRACE_MS`), because iPhone Safari sometimes never fires `start` or `end`. On iPhone it only works with Dictation or Siri turned on, in a Safari tab (not a home-screen web app)
 2. `src/lib/voiceTransaction.ts` - Sends `{ text, today }` to `/api/parse-transaction` and validates the reply (`toVoiceDraft`) before it touches the form
 3. `api/parse-transaction.ts` - Vercel Function that asks Gemini (`gemini-3.5-flash-lite` on Google's free tier, `generateContent` with `responseJsonSchema`) for type, amount, category, title and date
 4. The form is filled for review; nothing is saved until the user confirms
@@ -81,4 +81,4 @@ Vitest + Testing Library (jsdom), configured in `vite.config.ts` with `src/test/
 
 For anything that renders the app, use `src/test/app.tsx`: call `setupAppTests()` inside the `describe` (fixed date 2026-10-28 and a known transaction set) and `renderApp("/path")` to mount the real routes in a memory router. Only `Date` is faked (`vi.useFakeTimers({ toFake: ["Date"] })`), so user-event keeps working. `src/App.test.tsx` covers layout, navigation and the dashboard; each page has its own `*.test.tsx` in `src/pages/`.
 
-Voice entry tests never touch a real microphone or the network: `TransactionFormModal.test.tsx` stubs `webkitSpeechRecognition` with a fake that the test drives (`hear`, `finish`, `fail`) and stubs `fetch` with `vi.stubGlobal`.
+Voice entry tests never touch a real microphone or the network: `TransactionFormModal.test.tsx` stubs `webkitSpeechRecognition` with a fake that the test drives (`hear`, `finish`, `fail`) and stubs `fetch` with `vi.stubGlobal`. `useSpeechRecognition.test.ts` tests the hook's timeouts with `vi.useFakeTimers()` and a fake whose `stop` does not fire `end`, like iPhone Safari.
