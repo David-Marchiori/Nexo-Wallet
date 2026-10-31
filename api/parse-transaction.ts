@@ -118,6 +118,26 @@ async function readInput(request: Request): Promise<{ text: string; today: strin
   return { text: trimmed, today }
 }
 
+type GeminiError = {
+  error?: { status?: string; message?: string; details?: { reason?: string }[] }
+}
+
+/**
+ * Resumo do erro devolvido pelo Google para o log (ex.: `HTTP 403 · PERMISSION_DENIED · SERVICE_DISABLED · …`).
+ * Traz o motivo da recusa (chave inválida, API desativada, restrição da chave), não a frase do usuário.
+ */
+async function describeGeminiError(response: Response): Promise<string> {
+  const summary = `HTTP ${response.status}`
+  try {
+    const { error } = (await response.json()) as GeminiError
+    if (!error) return summary
+    const reasons = (error.details ?? []).map((detail) => detail.reason)
+    return [summary, error.status, ...reasons, error.message?.slice(0, 300)].filter(Boolean).join(" · ")
+  } catch {
+    return summary
+  }
+}
+
 type GeminiResponse = {
   promptFeedback?: { blockReason?: string }
   candidates?: {
@@ -161,7 +181,7 @@ export async function POST(request: Request): Promise<Response> {
 
   // O plano gratuito tem limite de pedidos por minuto e por dia.
   if (response.status === 429) return fail("rate_limited", "limite do plano gratuito")
-  if (!response.ok) return fail("ai_failed", `HTTP ${response.status}`)
+  if (!response.ok) return fail("ai_failed", await describeGeminiError(response))
 
   try {
     const result = (await response.json()) as GeminiResponse

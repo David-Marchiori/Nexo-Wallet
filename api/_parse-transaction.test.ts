@@ -162,6 +162,30 @@ describe("POST /api/parse-transaction", () => {
     expect(response.status).toBe(502)
   })
 
+  it("registra no log o motivo que o Google deu para recusar o pedido", async () => {
+    const error = {
+      code: 403,
+      status: "PERMISSION_DENIED",
+      message: "Generative Language API has not been used in project 123 before or it is disabled.",
+      details: [{ "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "SERVICE_DISABLED" }],
+    }
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ error }), { status: 403 }))
+
+    const response = await call({ text: "gastei 10 reais", today: "2026-10-28" })
+
+    expect(response.status).toBe(502)
+    expect(console.error).toHaveBeenCalledExactlyOnceWith(
+      "parse-transaction: ai_failed (HTTP 403 · PERMISSION_DENIED · SERVICE_DISABLED · Generative Language API has not been used in project 123 before or it is disabled.)",
+    )
+  })
+
+  it("registra só o código HTTP quando o erro não vem em JSON", async () => {
+    fetchMock.mockResolvedValue(new Response("<html>", { status: 500 }))
+    await call({ text: "gastei 10 reais", today: "2026-10-28" })
+
+    expect(console.error).toHaveBeenCalledExactlyOnceWith("parse-transaction: ai_failed (HTTP 500)")
+  })
+
   it("não registra a frase do usuário nos logs", async () => {
     fetchMock.mockResolvedValue(new Response("{}", { status: 500 }))
     await call({ text: "gastei 777 reais no segredo", today: "2026-10-28" })
