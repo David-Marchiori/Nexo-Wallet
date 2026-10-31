@@ -7,7 +7,7 @@ Personal finance dashboard. React + Vite + TypeScript with CSS Modules, original
 Uses **npm** (Node 24). No server is started automatically.
 
 - `npm install` - Install dependencies
-- `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload. It also serves `/api/<name>` from `api/<name>.ts` (a small plugin in `vite.config.ts`), so voice entry works locally once `ANTHROPIC_API_KEY` is in `.env.local` (see `.env.example`)
+- `npm run dev` - Start the Vite dev server at http://localhost:5173 with hot reload. It also serves `/api/<name>` from `api/<name>.ts` (a small plugin in `vite.config.ts`), so voice entry works locally once `GEMINI_API_KEY` is in `.env.local` (see `.env.example`)
 - `npm run typecheck` - Run `tsc --noEmit`
 - `npm test` - Run the Vitest suite once (`npm run test:watch` to keep it running)
 - `npm run build` - Type-check, then build to `dist/`
@@ -20,10 +20,10 @@ The "Nova transação" form has a microphone button (create mode only, hidden in
 
 1. `src/hooks/useSpeechRecognition.ts` - The browser transcribes one sentence in pt-BR (it asks for microphone permission; needs https or localhost)
 2. `src/lib/voiceTransaction.ts` - Sends `{ text, today }` to `/api/parse-transaction` and validates the reply (`toVoiceDraft`) before it touches the form
-3. `api/parse-transaction.ts` - Vercel Function that asks Claude (`claude-haiku-5-5`, JSON structured output) for type, amount, category, title and date
+3. `api/parse-transaction.ts` - Vercel Function that asks Gemini (`gemini-3.5-flash-lite` on Google's free tier, `generateContent` with `responseJsonSchema`) for type, amount, category, title and date
 4. The form is filled for review; nothing is saved until the user confirms
 
-Environment variables (Vercel project settings, or `.env.local` for `npm run dev`): `ANTHROPIC_API_KEY` (required) and `ANTHROPIC_MODEL` (optional). Never prefix them with `VITE_`: Vite inlines `VITE_*` variables into the browser bundle. The function has no login in front of it, so it caps the input at 300 characters and `max_tokens` at 300; a monthly spend limit on the Anthropic account is the safety net.
+Environment variables (Vercel project settings, or `.env.local` for `npm run dev`): `GEMINI_API_KEY` (required, created at https://aistudio.google.com/apikey) and `GEMINI_MODEL` (optional). Never prefix them with `VITE_`: Vite inlines `VITE_*` variables into the browser bundle. The function has no login in front of it, so it caps the input at 300 characters and the output at 1024 tokens. The free tier costs nothing but has per-project rate limits: a `429` from Gemini becomes `rate_limited`, which the form explains to the user. On the free tier Google may use the sentences to improve its products.
 
 Rules for `api/`:
 
