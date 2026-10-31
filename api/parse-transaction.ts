@@ -1,8 +1,8 @@
 /**
  * Função da Vercel (POST /api/parse-transaction) que transforma uma frase
- * ditada em um rascunho de transação usando o Claude.
+ * ditada em um rascunho de transação usando o Gemini (plano gratuito do Google).
  *
- * A chave fica na variável de ambiente ANTHROPIC_API_KEY e nunca chega ao
+ * A chave fica na variável de ambiente GEMINI_API_KEY e nunca chega ao
  * navegador. O arquivo não importa nada do projeto: a Vercel publica cada
  * arquivo de /api isolado e não empacota imports relativos.
  *
@@ -11,10 +11,12 @@
  * valida de novo em `src/lib/voiceTransaction.ts` antes de preencher o formulário.
  */
 
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-const DEFAULT_MODEL = "claude-haiku-5-5"
+const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models"
+/** Modelo estável mais rápido do plano gratuito; o raciocínio dele já vem no mínimo. */
+const DEFAULT_MODEL = "gemini-3.5-flash-lite"
 /** Frases ditadas são curtas; o limite barra textos longos enviados direto à função. */
 const MAX_TEXT_LENGTH = 300
+const MAX_OUTPUT_TOKENS = 1024
 const TIMEOUT_MS = 15_000
 
 /** Mesmas categorias de `src/data/categories.ts` (um teste garante que continuam iguais). */
@@ -59,10 +61,11 @@ const OUTPUT_SCHEMA = {
   additionalProperties: false,
 }
 
-type ErrorCode = "invalid_request" | "not_configured" | "ai_failed"
+type ErrorCode = "invalid_request" | "not_configured" | "rate_limited" | "ai_failed"
 
 const ERROR_STATUS: Record<ErrorCode, number> = {
   invalid_request: 400,
+  rate_limited: 429,
   not_configured: 503,
   ai_failed: 502,
 }
@@ -115,40 +118,40 @@ async function readInput(request: Request): Promise<{ text: string; today: strin
   return { text: trimmed, today }
 }
 
-type AnthropicResponse = {
-  stop_reason?: string
-  content?: { type: string; text?: string }[]
+type GeminiResponse = {
+  promptFeedback?: { blockReason?: string }
+  candidates?: {
+    finishReason?: string
+    content?: { parts?: { text?: string; thought?: boolean }[] }
+  }[]
 }
 
 export async function POST(request: Request): Promise<Response> {
   const input = await readInput(request)
   if (!input) return fail("invalid_request")
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return fail("not_configured", "ANTHROPIC_API_KEY ausente")
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return fail("not_configured", "GEMINI_API_KEY ausente")
 
+  const model = process.env.GEMINI_MODEL || DEFAULT_MODEL
   let response: Response
   try {
-    response = await fetch(ANTHROPIC_URL, {
+    response = await fetch(`${GEMINI_URL}/${encodeURIComponent(model)}:generateContent`, {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || DEFAULT_MODEL,
-        max_tokens: 300,
-        // Extração simples: sem raciocínio prévio e com esforço baixo, a resposta volta mais rápido.
-        thinking: { type: "disabled" },
-        output_config: { effort: "low", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
-        system: SYSTEM_PROMPT,
-        messages: [
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [
           {
             role: "user",
-            content: `Calendário:\n${calendarFor(input.today)}\n\nFrase ditada: "${input.text}"`,
+            parts: [{ text: `Calendário:\n${calendarFor(input.today)}\n\nFrase ditada: "${input.text}"` }],
           },
         ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseJsonSchema: OUTPUT_SCHEMA,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        },
       }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
@@ -156,12 +159,21 @@ export async function POST(request: Request): Promise<Response> {
     return fail("ai_failed", error instanceof Error ? error.name : "erro de rede")
   }
 
+  // O plano gratuito tem limite de pedidos por minuto e por dia.
+  if (response.status === 429) return fail("rate_limited", "limite do plano gratuito")
   if (!response.ok) return fail("ai_failed", `HTTP ${response.status}`)
 
   try {
-    const message = (await response.json()) as AnthropicResponse
-    if (message.stop_reason !== "end_turn") return fail("ai_failed", `stop_reason ${message.stop_reason}`)
-    const text = message.content?.find((block) => block.type === "text")?.text
+    const result = (await response.json()) as GeminiResponse
+    const blocked = result.promptFeedback?.blockReason
+    if (blocked) return fail("ai_failed", `bloqueado: ${blocked}`)
+
+    const candidate = result.candidates?.[0]
+    if (candidate?.finishReason !== "STOP") return fail("ai_failed", `finishReason ${candidate?.finishReason}`)
+    const text = candidate.content?.parts
+      ?.filter((part) => !part.thought && typeof part.text === "string")
+      .map((part) => part.text)
+      .join("")
     if (!text) return fail("ai_failed", "resposta sem texto")
     return json(JSON.parse(text))
   } catch {

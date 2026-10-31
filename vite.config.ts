@@ -6,7 +6,7 @@ import path from 'node:path'
 
 /**
  * No `npm run dev`, atende `/api/<nome>` com a função de `api/<nome>.ts`, como a Vercel faz em produção.
- * Lê as variáveis do `.env.local` (ex.: ANTHROPIC_API_KEY) só para essas funções: sem o prefixo VITE_,
+ * Lê as variáveis do `.env.local` (ex.: GEMINI_API_KEY) só para essas funções: sem o prefixo VITE_,
  * elas nunca entram no código enviado ao navegador.
  */
 function vercelFunctionsInDev(): Plugin {

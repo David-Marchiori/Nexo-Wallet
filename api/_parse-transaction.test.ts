@@ -23,18 +23,24 @@ function call(body: unknown) {
   )
 }
 
-function claudeReply(text: string, stopReason = "end_turn") {
-  return new Response(JSON.stringify({ stop_reason: stopReason, content: [{ type: "text", text }] }), { status: 200 })
+/** Resposta do generateContent com um candidato. */
+function geminiReply(parts: { text: string; thought?: boolean }[], finishReason = "STOP") {
+  return new Response(JSON.stringify({ candidates: [{ finishReason, content: { role: "model", parts } }] }), {
+    status: 200,
+  })
 }
+
+const sentBody = (fetchMock: ReturnType<typeof vi.fn<typeof fetch>>) =>
+  JSON.parse(String(fetchMock.mock.calls[0][1]?.body))
 
 describe("POST /api/parse-transaction", () => {
   const fetchMock = vi.fn<typeof fetch>()
 
   beforeEach(() => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "chave-de-teste")
+    vi.stubEnv("GEMINI_API_KEY", "chave-de-teste")
     vi.stubGlobal("fetch", fetchMock)
     vi.spyOn(console, "error").mockImplementation(() => {})
-    fetchMock.mockResolvedValue(claudeReply(JSON.stringify(draft)))
+    fetchMock.mockResolvedValue(geminiReply([{ text: JSON.stringify(draft) }]))
   })
 
   afterEach(() => {
@@ -44,24 +50,27 @@ describe("POST /api/parse-transaction", () => {
     fetchMock.mockReset()
   })
 
-  it("devolve o rascunho que o Claude extraiu da frase", async () => {
+  it("devolve o rascunho que o Gemini extraiu da frase", async () => {
     const response = await call({ text: "gastei 52 reais no ifood ontem", today: "2026-10-28" })
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual(draft)
   })
 
-  it("chama a API do Claude com a chave do servidor, a frase e o calendário", async () => {
+  it("chama o Gemini com a chave do servidor, a frase e o calendário", async () => {
     await call({ text: "  gastei 52 reais no ifood ontem  ", today: "2026-10-28" })
 
     expect(fetchMock).toHaveBeenCalledOnce()
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe("https://api.anthropic.com/v1/messages")
-    expect(new Headers(init?.headers).get("x-api-key")).toBe("chave-de-teste")
+    expect(url).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+    )
+    expect(new Headers(init?.headers).get("x-goog-api-key")).toBe("chave-de-teste")
 
-    const body = JSON.parse(String(init?.body))
-    expect(body.model).toBe("claude-haiku-5-5")
-    const prompt = body.messages[0].content as string
+    const body = sentBody(fetchMock)
+    expect(body.systemInstruction.parts[0].text).toContain("Categorias:")
+    expect(body.generationConfig.responseMimeType).toBe("application/json")
+    const prompt = body.contents[0].parts[0].text as string
     expect(prompt).toContain('Frase ditada: "gastei 52 reais no ifood ontem"')
     expect(prompt).toContain("- hoje, quarta-feira: 2026-10-28")
     expect(prompt).toContain("- ontem, terça-feira: 2026-10-27")
@@ -71,23 +80,32 @@ describe("POST /api/parse-transaction", () => {
   it("usa no esquema exatamente as categorias do app", async () => {
     await call({ text: "paguei o aluguel", today: "2026-10-28" })
 
-    const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body))
-    expect(body.output_config.format.schema.properties.category.enum).toEqual(categories)
+    expect(sentBody(fetchMock).generationConfig.responseJsonSchema.properties.category.enum).toEqual(categories)
   })
 
   it("monta o calendário certo na virada do mês", async () => {
     await call({ text: "gastei 10 reais", today: "2026-03-01" })
 
-    const prompt = JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).messages[0].content as string
+    const prompt = sentBody(fetchMock).contents[0].parts[0].text as string
     expect(prompt).toContain("- hoje, domingo: 2026-03-01")
     expect(prompt).toContain("- ontem, sábado: 2026-02-28")
   })
 
-  it("permite trocar o modelo pela variável ANTHROPIC_MODEL", async () => {
-    vi.stubEnv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+  it("permite trocar o modelo pela variável GEMINI_MODEL", async () => {
+    vi.stubEnv("GEMINI_MODEL", "gemini-3.8-flash")
     await call({ text: "gastei 10 reais", today: "2026-10-28" })
 
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).model).toBe("claude-sonnet-5-5")
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent",
+    )
+  })
+
+  it("ignora o raciocínio e junta as partes do texto", async () => {
+    const [start, end] = [JSON.stringify(draft).slice(0, 20), JSON.stringify(draft).slice(20)]
+    fetchMock.mockResolvedValue(geminiReply([{ text: "pensando…", thought: true }, { text: start }, { text: end }]))
+
+    const response = await call({ text: "gastei 52 reais no ifood", today: "2026-10-28" })
+    expect(await response.json()).toEqual(draft)
   })
 
   it.each([
@@ -97,7 +115,7 @@ describe("POST /api/parse-transaction", () => {
     ["texto longo demais", { text: "a".repeat(301), today: "2026-10-28" }],
     ["data inválida", { text: "gastei 10 reais", today: "2026-02-30" }],
     ["sem data", { text: "gastei 10 reais" }],
-  ])("recusa pedido com %s sem chamar o Claude", async (_, body) => {
+  ])("recusa pedido com %s sem chamar o Gemini", async (_, body) => {
     const response = await call(body)
 
     expect(response.status).toBe(400)
@@ -106,7 +124,7 @@ describe("POST /api/parse-transaction", () => {
   })
 
   it("avisa quando a chave não está configurada", async () => {
-    vi.stubEnv("ANTHROPIC_API_KEY", "")
+    vi.stubEnv("GEMINI_API_KEY", "")
     const response = await call({ text: "gastei 10 reais", today: "2026-10-28" })
 
     expect(response.status).toBe(503)
@@ -114,11 +132,21 @@ describe("POST /api/parse-transaction", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("avisa quando o limite do plano gratuito acaba", async () => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 429 }))
+    const response = await call({ text: "gastei 10 reais", today: "2026-10-28" })
+
+    expect(response.status).toBe(429)
+    expect(await response.json()).toEqual({ error: "rate_limited" })
+  })
+
   it.each([
-    ["erro HTTP do Claude", () => new Response("{}", { status: 529 })],
-    ["resposta cortada", () => claudeReply('{"understood": tr', "max_tokens")],
-    ["recusa", () => claudeReply("", "refusal")],
-    ["texto que não é JSON", () => claudeReply("não sei")],
+    ["erro HTTP do Gemini", () => new Response("{}", { status: 500 })],
+    ["chave recusada", () => new Response("{}", { status: 403 })],
+    ["resposta cortada", () => geminiReply([{ text: '{"understood": tr' }], "MAX_TOKENS")],
+    ["bloqueio de segurança", () => new Response(JSON.stringify({ promptFeedback: { blockReason: "SAFETY" } }))],
+    ["resposta sem candidatos", () => new Response(JSON.stringify({ candidates: [] }))],
+    ["texto que não é JSON", () => geminiReply([{ text: "não sei" }])],
   ])("responde 502 em caso de %s", async (_, reply) => {
     fetchMock.mockResolvedValue(reply())
     const response = await call({ text: "gastei 10 reais", today: "2026-10-28" })

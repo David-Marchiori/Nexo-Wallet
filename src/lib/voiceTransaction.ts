@@ -21,6 +21,7 @@ const MESSAGES = {
   notUnderstood: "Não reconheci uma receita ou despesa. Tente algo como “gastei 50 reais no mercado”.",
   notConfigured: "O ditado por voz ainda não foi configurado neste site.",
   invalidRequest: "Não consegui enviar essa frase. Tente uma mais curta.",
+  rateLimited: "O limite gratuito do ditado acabou por agora. Tente de novo daqui a pouco ou preencha à mão.",
   failed: "Não consegui entender agora. Tente de novo ou preencha à mão.",
 }
 
@@ -52,7 +53,7 @@ export function toVoiceDraft(value: unknown, today: string): VoiceDraft | null {
 }
 
 /**
- * Envia a frase transcrita para a função, que usa o Claude para identificar tipo, valor,
+ * Envia a frase transcrita para a função, que usa o Gemini para identificar tipo, valor,
  * categoria, descrição e data. `today` é a data local (`AAAA-MM-DD`) para resolver "ontem".
  */
 export async function interpretSpeech(text: string, today: string, signal?: AbortSignal): Promise<VoiceDraft> {
@@ -74,6 +75,7 @@ export async function interpretSpeech(text: string, today: string, signal?: Abor
     const code = (body as { error?: unknown } | null)?.error
     if (code === "not_configured") throw new VoiceDraftError(MESSAGES.notConfigured)
     if (code === "invalid_request") throw new VoiceDraftError(MESSAGES.invalidRequest)
+    if (code === "rate_limited") throw new VoiceDraftError(MESSAGES.rateLimited)
     throw new VoiceDraftError(MESSAGES.failed)
   }
 
